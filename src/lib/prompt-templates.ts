@@ -26,7 +26,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     nameVi: "Streetwear Ngông",
     description: "Nhân vật con vật nhân hóa mặc đồ streetwear, sneakers, dây chuyền vàng. Thái độ tự tin, flexing. Style Money Studio / Bò và Gấu.",
     preview: "🔥",
-    previewUrl: "/templates/streetwear-flex.png",
+    previewUrl: "/templates/streetwear-flex.webp",
     characterStyle: `Cartoon nhân hóa (anthropomorphic) style fanpage meme tài chính Việt Nam (Money Studio, Bò và Gấu).
 - Nhân vật con vật đứng 2 chân như người, tỉ lệ cơ thể semi-realistic (không chibi)
 - Trang phục streetwear: hoodie/jacket, quần short/jeans, sneakers Nike/Jordan đỏ-trắng
@@ -47,7 +47,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     nameVi: "Chibi Dễ Thương",
     description: "Chibi đầu to mắt tròn, nét vẽ đậm, flat color. Style Thỏ Bảy Màu, Mèo Mập.",
     preview: "🥰",
-    previewUrl: "/templates/chibi-cute.png",
+    previewUrl: "/templates/chibi-cute.webp",
     characterStyle: `Chibi cartoon dễ thương style fanpage meme Việt Nam (Thỏ Bảy Màu, Mèo Mập).
 - Tỉ lệ chibi: đầu chiếm 40% cơ thể, mắt to tròn chiếm 1/3 khuôn mặt
 - Thân nhỏ, tay chân ngắn mập, dáng tròn trĩnh
@@ -68,7 +68,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     nameVi: "Vector Tối Giản",
     description: "Flat design tối giản, geometric shapes, màu sắc bold. Style hiện đại cho tech/startup.",
     preview: "🎨",
-    previewUrl: "/templates/flat-vector.png",
+    previewUrl: "/templates/flat-vector.webp",
     characterStyle: `Modern flat vector illustration style.
 - Geometric shapes đơn giản, minimal detail
 - Flat colors không gradient, không bóng đổ
@@ -89,7 +89,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     nameVi: "Manga Anime",
     description: "Style manga Nhật, mắt anime lớn, tóc dynamic, shading chi tiết. Phù hợp meme otaku/gaming.",
     preview: "⚡",
-    previewUrl: "/templates/manga-anime.png",
+    previewUrl: "/templates/manga-anime.webp",
     characterStyle: `Manga/anime style illustration.
 - Mắt anime lớn chi tiết: có highlight, reflection, iris màu sắc
 - Tóc dynamic nhiều lọn, có movement
@@ -110,7 +110,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     nameVi: "Màu Nước Nhẹ Nhàng",
     description: "Watercolor mềm mại, pastel, dreamy. Phù hợp meme tình cảm, healing, motivational.",
     preview: "🌸",
-    previewUrl: "/templates/watercolor-soft.png",
+    previewUrl: "/templates/watercolor-soft.webp",
     characterStyle: `Soft watercolor illustration style.
 - Watercolor texture: paint bleed, wet edges, pigment pooling
 - Pastel palette nhẹ nhàng: hồng, lavender, mint, baby blue
@@ -131,7 +131,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     nameVi: "Pixel Art Retro",
     description: "Pixel art 16-32bit, retro gaming aesthetic. Phù hợp meme gaming, nostalgia.",
     preview: "👾",
-    previewUrl: "/templates/pixel-retro.png",
+    previewUrl: "/templates/pixel-retro.webp",
     characterStyle: `Pixel art retro style 32-bit era.
 - Pixel art rõ ràng, mỗi pixel nhìn thấy được
 - Palette giới hạn 16-32 màu kiểu retro game
@@ -152,7 +152,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     nameVi: "Graffiti Đường Phố",
     description: "Street art graffiti, spray paint texture, bold colors. Edgy, rebellious vibe.",
     preview: "🎤",
-    previewUrl: "/templates/graffiti-urban.png",
+    previewUrl: "/templates/graffiti-urban.webp",
     characterStyle: `Street art graffiti style illustration.
 - Spray paint texture, drip effects, paint splatter
 - Bold vivid colors: neon, primary colors mạnh
@@ -173,7 +173,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     nameVi: "Mascot Doanh Nghiệp",
     description: "Clean, professional mascot style. Phù hợp brand, công ty, sản phẩm.",
     preview: "🏢",
-    previewUrl: "/templates/corporate-mascot.png",
+    previewUrl: "/templates/corporate-mascot.webp",
     characterStyle: `Professional corporate mascot illustration style.
 - Clean, polished, high-quality rendering
 - Smooth gradients và soft shadows

@@ -10,6 +10,7 @@ import {
   UtensilsCrossed, Dumbbell, Bitcoin, GraduationCap, HeartHandshake, Briefcase
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { getBlur } from "@/lib/image-blurs";
 
 /* ============================================
    Mascot SVG Components
@@ -373,7 +374,7 @@ export default function Home() {
                 style={{ borderColor: "var(--border-primary)" }}
               >
                 <div className="relative w-full h-3/5">
-                  <NextImage src="/showcase/chungkhoan.png" alt="Meme chứng khoán" fill className="object-cover" sizes="224px" />
+                  <NextImage src="/showcase/chungkhoan.webp" alt="Meme chứng khoán" fill className="object-cover" sizes="224px" placeholder="blur" blurDataURL={getBlur("showcase", "chungkhoan")} />
                   <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-violet-500 to-pink-500 text-white shadow">
                     AI Generated
                   </div>
@@ -393,12 +394,12 @@ export default function Home() {
               <div className="absolute left-1/2 top-1/2 w-44 h-56 rounded-2xl border shadow-lg overflow-hidden z-[5] opacity-60"
                 style={{ borderColor: "var(--border-primary)", transform: "translate(-85%, -55%) rotate(-8deg)" }}
               >
-                <NextImage src="/showcase/food.png" alt="Meme ẩm thực" fill className="object-cover" sizes="176px" />
+                <NextImage src="/showcase/food.webp" alt="Meme ẩm thực" fill className="object-cover" sizes="176px" placeholder="blur" blurDataURL={getBlur("showcase", "food")} />
               </div>
               <div className="absolute left-1/2 top-1/2 w-44 h-56 rounded-2xl border shadow-lg overflow-hidden z-[5] opacity-60"
                 style={{ borderColor: "var(--border-primary)", transform: "translate(15%, -45%) rotate(6deg)" }}
               >
-                <NextImage src="/showcase/gaming.png" alt="Meme gaming" fill className="object-cover" sizes="176px" />
+                <NextImage src="/showcase/gaming.webp" alt="Meme gaming" fill className="object-cover" sizes="176px" placeholder="blur" blurDataURL={getBlur("showcase", "gaming")} />
               </div>
 
               {/* Floating mascots around the card */}
@@ -517,11 +518,13 @@ export default function Home() {
               >
                 <div className="aspect-square relative overflow-hidden">
                   <NextImage
-                    src={`/showcase/${meme.id}.png`}
+                    src={`/showcase/${meme.id}.webp`}
                     alt={meme.title}
                     fill
                     sizes="(max-width: 768px) 50vw, 25vw"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    placeholder="blur"
+                    blurDataURL={getBlur("showcase", meme.id)}
                   />
                   {/* Overlay gradient on hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
