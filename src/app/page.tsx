@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import NextImage from "next/image";
 import { useState, useEffect } from "react";
 import {
-  Sparkles, Zap, Users, Image, ArrowRight, Palette, Download,
+  Sparkles, Zap, Users, Image as ImageIcon, ArrowRight, Palette, Download,
   Layers, Moon, Sun, ChevronDown, ChevronUp, MessageSquare,
-  Star, Play, Heart, Flame, PartyPopper
+  Star, Play, Heart, Flame, PartyPopper, TrendingUp, Gamepad2,
+  UtensilsCrossed, Dumbbell, Bitcoin, GraduationCap, HeartHandshake, Briefcase
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 
@@ -274,32 +276,6 @@ function SparkleParticle({ delay, x, y, size = 8 }: { delay: number; x: string; 
 }
 
 /* ============================================
-   Meme card preview
-   ============================================ */
-function MemePreviewCard({ title, style: cardStyle, color, mascot, rotation }: {
-  title: string; style: string; color: string; mascot: React.ReactNode; rotation: number
-}) {
-  return (
-    <div
-      className="relative w-48 h-60 rounded-2xl border-2 overflow-hidden shadow-xl transition-transform hover:scale-105 flex-shrink-0"
-      style={{
-        background: `linear-gradient(135deg, ${color}22, ${color}44)`,
-        borderColor: `${color}66`,
-        transform: `rotate(${rotation}deg)`,
-      }}
-    >
-      <div className="absolute inset-0 flex items-center justify-center opacity-60">
-        {mascot}
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 p-3" style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.6))" }}>
-        <p className="text-white text-xs font-bold">{title}</p>
-        <p className="text-white/70 text-[10px] mt-0.5">{cardStyle}</p>
-      </div>
-    </div>
-  );
-}
-
-/* ============================================
    Main Landing Page
    ============================================ */
 export default function Home() {
@@ -392,28 +368,37 @@ export default function Home() {
 
             {/* Mascot showcase - right side */}
             <div className="flex-1 relative w-full max-w-lg h-[400px] md:h-[440px]">
-              {/* Central meme card mock */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-72 rounded-3xl border-2 shadow-2xl overflow-hidden z-10"
-                style={{
-                  background: "linear-gradient(135deg, var(--bg-card), var(--bg-secondary))",
-                  borderColor: "var(--border-primary)"
-                }}
+              {/* Central meme card — real AI image */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-72 rounded-3xl border-2 shadow-2xl overflow-hidden z-10 animate-float"
+                style={{ borderColor: "var(--border-primary)" }}
               >
-                <div className="h-3/5 bg-gradient-to-br from-violet-400/20 via-pink-400/20 to-amber-400/20 flex items-center justify-center relative">
-                  <BearMascot className="w-28 h-28 animate-float" />
-                  <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-violet-500 to-pink-500 text-white">
+                <div className="relative w-full h-3/5">
+                  <NextImage src="/showcase/chungkhoan.png" alt="Meme chứng khoán" fill className="object-cover" sizes="224px" />
+                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-violet-500 to-pink-500 text-white shadow">
                     AI Generated
                   </div>
                 </div>
-                <div className="p-4">
-                  <p className="font-bold th-text-primary text-sm">&ldquo;Khi sếp bảo cuối tuần không OT&rdquo;</p>
-                  <p className="text-xs th-text-muted mt-1.5">Gấu Finance &bull; Chibi Cute</p>
-                  <div className="flex items-center gap-3 mt-3">
+                <div className="p-3" style={{ background: "var(--bg-card)" }}>
+                  <p className="font-bold th-text-primary text-sm leading-snug">&ldquo;Khi cổ phiếu tăng trần&rdquo;</p>
+                  <p className="text-xs th-text-muted mt-1">Bò Chứng Khoán &bull; Streetwear Flex</p>
+                  <div className="flex items-center gap-3 mt-2">
                     <span className="flex items-center gap-1 text-xs th-text-muted"><Heart size={12} /> 2.4k</span>
                     <span className="flex items-center gap-1 text-xs th-text-muted"><MessageSquare size={12} /> 186</span>
                     <span className="flex items-center gap-1 text-xs th-text-muted"><Flame size={12} /> Viral</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Background meme cards for depth */}
+              <div className="absolute left-1/2 top-1/2 w-44 h-56 rounded-2xl border shadow-lg overflow-hidden z-[5] opacity-60"
+                style={{ borderColor: "var(--border-primary)", transform: "translate(-85%, -55%) rotate(-8deg)" }}
+              >
+                <NextImage src="/showcase/food.png" alt="Meme ẩm thực" fill className="object-cover" sizes="176px" />
+              </div>
+              <div className="absolute left-1/2 top-1/2 w-44 h-56 rounded-2xl border shadow-lg overflow-hidden z-[5] opacity-60"
+                style={{ borderColor: "var(--border-primary)", transform: "translate(15%, -45%) rotate(6deg)" }}
+              >
+                <NextImage src="/showcase/gaming.png" alt="Meme gaming" fill className="object-cover" sizes="176px" />
               </div>
 
               {/* Floating mascots around the card */}
@@ -500,58 +485,72 @@ export default function Home() {
       </section>
 
       {/* ============================================
-         DEMO - Meme showcase carousel
+         DEMO - Real AI-generated meme showcase
          ============================================ */}
       <section id="demo" className="py-20 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/3 to-transparent" />
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-4 bg-gradient-to-r from-pink-500/10 to-violet-500/10 th-text-accent">
-              <PartyPopper size={14} /> SHOWCASE
+              <PartyPopper size={14} /> SHOWCASE — TẠO BỞI AI
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold th-text-primary mb-4">Meme được tạo bởi AI</h2>
+            <h2 className="text-3xl md:text-4xl font-extrabold th-text-primary mb-4">Meme cho mọi chủ đề fanpage</h2>
             <p className="text-lg th-text-tertiary max-w-2xl mx-auto">
-              Chỉ cần nhập ý tưởng, AI sẽ biến thành meme hoàn chỉnh với nhân vật mascot của bạn
+              Chứng khoán, tình yêu, office, gaming, ẩm thực, crypto... Chỉ cần nhập ý tưởng, AI lo hết!
             </p>
           </div>
 
-          {/* Meme cards showcase */}
-          <div className="flex justify-center gap-6 flex-wrap">
-            <MemePreviewCard
-              title="Khi sếp bảo tăng lương..."
-              style="Chibi Cute"
-              color="#7c3aed"
-              mascot={<BearMascot className="w-32 h-32" />}
-              rotation={-3}
-            />
-            <MemePreviewCard
-              title="Monday mood be like"
-              style="Streetwear Flex"
-              color="#ec4899"
-              mascot={<CatMascot className="w-32 h-32" />}
-              rotation={2}
-            />
-            <MemePreviewCard
-              title="Crush nhắn 'Ê' lúc 2h sáng"
-              style="Manga Anime"
-              color="#f59e0b"
-              mascot={<BunnyMascot className="w-32 h-32" />}
-              rotation={-1}
-            />
-            <MemePreviewCard
-              title="Khi code chạy lần đầu"
-              style="Pixel Retro"
-              color="#10b981"
-              mascot={<ChickMascot className="w-32 h-32" />}
-              rotation={3}
-            />
-            <MemePreviewCard
-              title="Deadline ngày mai, hôm nay..."
-              style="Graffiti Urban"
-              color="#6366f1"
-              mascot={<PandaMascot className="w-32 h-32" />}
-              rotation={-2}
-            />
+          {/* Real meme image grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+            {[
+              { id: "chungkhoan", title: "Khi cổ phiếu tăng trần", category: "Chứng khoán", icon: TrendingUp, color: "#10b981" },
+              { id: "couple", title: "Khi bạn nói 'anh đói' lúc 2h sáng", category: "Couple / Tình yêu", icon: HeartHandshake, color: "#ec4899" },
+              { id: "office", title: "Friday 5h chiều vs Monday 8h sáng", category: "Office / Công sở", icon: Briefcase, color: "#6366f1" },
+              { id: "gaming", title: "Đêm nay không ngủ, rank phải lên", category: "Gaming", icon: Gamepad2, color: "#7c3aed" },
+              { id: "food", title: "Ai nói đi ăn là đi ngay", category: "Ẩm thực", icon: UtensilsCrossed, color: "#f59e0b" },
+              { id: "gym", title: "Ngày đầu đi gym", category: "Gym / Fitness", icon: Dumbbell, color: "#ef4444" },
+              { id: "crypto", title: "HODL to the moon", category: "Crypto / Tài chính", icon: Bitcoin, color: "#f97316" },
+              { id: "student", title: "Thi ngày mai, hôm nay mới học", category: "Học sinh / Sinh viên", icon: GraduationCap, color: "#3b82f6" },
+            ].map((meme) => (
+              <div key={meme.id} className="group relative rounded-2xl overflow-hidden border transition-all hover:shadow-xl hover:-translate-y-1 cursor-default"
+                style={{ borderColor: "var(--border-primary)" }}
+              >
+                <div className="aspect-square relative overflow-hidden">
+                  <NextImage
+                    src={`/showcase/${meme.id}.png`}
+                    alt={meme.title}
+                    fill
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  {/* Overlay gradient on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
+                {/* Info bar */}
+                <div className="p-3 relative" style={{ background: "var(--bg-card)" }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <meme.icon size={14} style={{ color: meme.color }} />
+                    <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: meme.color }}>{meme.category}</span>
+                  </div>
+                  <p className="text-xs font-semibold th-text-primary leading-snug line-clamp-2">{meme.title}</p>
+                </div>
+                {/* AI badge */}
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[9px] font-bold bg-black/50 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                  AI Generated
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA under showcase */}
+          <div className="text-center mt-10">
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md shadow-violet-500/20"
+            >
+              Tạo meme cho fanpage của bạn
+              <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </section>
@@ -591,7 +590,7 @@ export default function Home() {
               mascot={<CatMascot className="w-16 h-16 opacity-20 absolute -bottom-2 -right-2" />}
             />
             <FeatureCard
-              icon={<Image size={24} />}
+              icon={<ImageIcon size={24} />}
               title="AI tạo ảnh"
               description="Gemini AI tạo ảnh meme hoàn chỉnh với nhân vật, text overlay và background. Hoặc dùng Canvas tự ghép."
               gradient="from-emerald-500 to-teal-500"
