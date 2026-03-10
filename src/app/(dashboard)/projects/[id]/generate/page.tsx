@@ -80,6 +80,7 @@ export default function GeneratePage() {
   const [taggedCharacterIds, setTaggedCharacterIds] = useState<Set<string>>(new Set());
   const [oneOffCharacters, setOneOffCharacters] = useState<string[]>([]);
   const [oneOffInput, setOneOffInput] = useState("");
+  const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<string>>(new Set());
   const [showQuickCharacterModal, setShowQuickCharacterModal] = useState(false);
   const [quickCharacterSaving, setQuickCharacterSaving] = useState(false);
   const [quickCharacterForm, setQuickCharacterForm] = useState({
@@ -175,6 +176,15 @@ export default function GeneratePage() {
 
   const toggleTaggedCharacter = (characterId: string) => {
     setTaggedCharacterIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(characterId)) next.delete(characterId);
+      else next.add(characterId);
+      return next;
+    });
+  };
+
+  const toggleSelectedCharacter = (characterId: string) => {
+    setSelectedCharacterIds((prev) => {
       const next = new Set(prev);
       if (next.has(characterId)) next.delete(characterId);
       else next.add(characterId);
@@ -311,6 +321,48 @@ export default function GeneratePage() {
     }
 
     setGenerating(false);
+  };
+
+  const handleDirectFlow = () => {
+    const normalizedIdea = idea.trim();
+    if (!normalizedIdea) return;
+
+    const selectedChars = characters.filter((c) => selectedCharacterIds.has(c.id));
+    const directVariation: ContentVariation = {
+      content: {
+        headline: normalizedIdea.length > 70 ? `${normalizedIdea.slice(0, 67)}...` : normalizedIdea,
+        subtext: undefined,
+        caption: undefined,
+        tone: "theo ý tưởng người dùng",
+        layout_suggestion: {
+          text_position: "top",
+          character_positions: [],
+        },
+      },
+      suggested_characters: selectedChars.map((c) => {
+        const firstPose = c.poses[0];
+        return {
+          character_id: c.id,
+          character_name: c.name,
+          pose_id: firstPose?.id || "",
+          pose_name: firstPose?.name || "",
+          emotion: firstPose?.emotion || "neutral",
+          suggested_emotion: firstPose?.emotion || "neutral",
+          reasoning: "Người dùng chọn thủ công",
+        };
+      }),
+      headline: normalizedIdea.length > 70 ? `${normalizedIdea.slice(0, 67)}...` : normalizedIdea,
+      subtext: undefined,
+      caption: undefined,
+      tone: "theo ý tưởng người dùng",
+      text_position: "top",
+    };
+
+    setVariations([directVariation]);
+    setSelectedVariation(0);
+    setTaggedCharacterIds(new Set(selectedChars.map((c) => c.id)));
+    setStep(3);
+    setRenderMode("ai");
   };
 
   const getCanvasCharacters = () => {
@@ -526,6 +578,7 @@ export default function GeneratePage() {
     setBgError(null);
     setAiCustomPrompt("");
     setTaggedCharacterIds(new Set());
+    setSelectedCharacterIds(new Set());
     setOneOffCharacters([]);
     setOneOffInput("");
     // Clean up reference image object URLs
@@ -688,12 +741,17 @@ export default function GeneratePage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {characters.map((c) => {
                         const avatar = c.avatar_url || c.poses[0]?.image_url;
+                        const selected = selectedCharacterIds.has(c.id);
                         return (
                           <button
                             key={c.id}
                             type="button"
-                            onClick={() => appendMentionToIdea(c.name)}
-                            className="flex items-center gap-2 p-2 rounded-xl th-bg-tertiary th-bg-hover text-left"
+                            onClick={() => toggleSelectedCharacter(c.id)}
+                            className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all ${
+                              selected
+                                ? "th-border-accent th-bg-accent-light"
+                                : "th-bg-tertiary th-bg-hover th-border"
+                            }`}
                           >
                             <div className="w-9 h-9 rounded-lg overflow-hidden th-bg-card flex items-center justify-center text-xs font-bold th-text-muted">
                               {avatar ? (
@@ -707,6 +765,15 @@ export default function GeneratePage() {
                               <p className="text-xs font-medium th-text-primary truncate">@{c.name}</p>
                               <p className="text-[11px] th-text-muted">{c.poses.length} biểu cảm</p>
                             </div>
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                appendMentionToIdea(c.name);
+                              }}
+                              className="ml-auto text-[10px] px-2 py-1 rounded-md th-bg-card th-text-secondary"
+                            >
+                              mention
+                            </span>
                           </button>
                         );
                       })}
@@ -751,15 +818,34 @@ export default function GeneratePage() {
                 </div>
 
                 <p className="text-xs th-text-muted">Bạn không bắt buộc phải có nhân vật sẵn trong thư viện để tạo meme.</p>
-                <Button size="lg" className="w-full" onClick={handleGenerate} loading={generating} disabled={!idea.trim()}>
-                  <Zap size={18} />
-                  {generating ? "AI đang xử lý..." : "Tạo nội dung meme"}
-                  {!generating && (
-                    <span className="ml-1.5 px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: "rgba(34,197,94,0.2)", color: "#22c55e" }}>
-                      Miễn phí
-                    </span>
-                  )}
-                </Button>
+                <div>
+                  <p className="text-xs th-text-tertiary mb-2">Định dạng nhanh:</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    {(Object.entries(FORMAT_DIMENSIONS) as [MemeFormat, { width: number; height: number; label: string }][]).map(([key]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setFormat(key)}
+                        className={`px-2 py-2 rounded-lg text-xs border ${
+                          format === key ? "th-border-accent th-bg-accent-light th-text-accent" : "th-bg-tertiary th-border th-text-secondary"
+                        }`}
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button size="lg" className="w-full" onClick={handleGenerate} loading={generating} disabled={!idea.trim()}>
+                    <Zap size={18} />
+                    {generating ? "AI đang xử lý..." : "Tạo nội dung meme"}
+                  </Button>
+                  <Button size="lg" variant="outline" className="w-full" onClick={handleDirectFlow} disabled={!idea.trim()}>
+                    <Wand2 size={18} />
+                    Bỏ qua AI idea, tạo ảnh luôn
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
