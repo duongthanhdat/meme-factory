@@ -399,30 +399,22 @@ export default function GeneratePage() {
           const selectedPose = fullChar?.poses.find((p) => p.id === suggestedPoseId) || fullChar?.poses[0];
           const refUrl = selectedPose?.image_url || fullChar?.avatar_url || fullChar?.poses[0]?.image_url;
 
-          if (!refUrl || refUrl.startsWith("/mock/")) {
-            return {
-              name: item.name,
-              emotion: item.emotion,
-              description: item.description,
-            };
+          if (!fullChar) {
+            throw new Error(`Không tìm thấy dữ liệu nhân vật "${item.name}". Vui lòng chọn lại nhân vật.`);
           }
 
-          try {
-            const inline = await imageUrlToInlineData(refUrl);
-            return {
-              name: item.name,
-              emotion: item.emotion,
-              description: item.description,
-              poseImageBase64: inline.base64,
-              poseMimeType: inline.mimeType,
-            };
-          } catch {
-            return {
-              name: item.name,
-              emotion: item.emotion,
-              description: item.description,
-            };
+          if (!refUrl || refUrl.startsWith("/mock/")) {
+            throw new Error(`Nhân vật "${item.name}" chưa có ảnh ref hợp lệ. Vui lòng thêm pose/đặt avatar trước khi tạo ảnh.`);
           }
+
+          const inline = await imageUrlToInlineData(refUrl);
+          return {
+            name: item.name,
+            emotion: item.emotion,
+            description: item.description,
+            poseImageBase64: inline.base64,
+            poseMimeType: inline.mimeType,
+          };
         })
       );
 
