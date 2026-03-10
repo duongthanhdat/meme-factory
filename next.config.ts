@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
         hostname: "qr.sepay.vn",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "img.vietqr.io",
+        pathname: "/**",
+      },
     ],
   },
 };

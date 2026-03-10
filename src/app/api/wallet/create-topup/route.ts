@@ -71,7 +71,9 @@ export async function POST(req: Request) {
 
     const orderId: string = newOrder.id;
     const description = `TL${orderId.substring(0, 8).toUpperCase()}`;
-    const qrUrl = `https://qr.sepay.vn/img?acc=${encodeURIComponent(beneficiary)}&bank=${encodeURIComponent(bankBin)}&amount=${encodeURIComponent(amount)}&des=${encodeURIComponent(description)}`;
+    // Use VietQR (img.vietqr.io) — more reliable than qr.sepay.vn which gets blocked by Cloudflare
+    // Format: https://img.vietqr.io/image/{BANK_BIN}-{ACCOUNT}-{TEMPLATE}.png?amount={}&addInfo={}&accountName={}
+    const qrUrl = `https://img.vietqr.io/image/${encodeURIComponent(bankBin)}-${encodeURIComponent(beneficiary)}-compact.png?amount=${encodeURIComponent(amount)}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
 
     return NextResponse.json({
       success: true,
