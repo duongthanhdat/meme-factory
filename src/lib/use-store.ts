@@ -39,6 +39,23 @@ let mockProjects = [...MOCK_PROJECTS];
 let mockCharacters = [...MOCK_CHARACTERS];
 let mockMemes = [...MOCK_MEMES];
 
+function slugifyProjectName(name: string): string {
+  const base = name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+  return base || "du-an";
+}
+
+function buildProjectSlug(name: string, id: string): string {
+  return `${slugifyProjectName(name)}-${id.slice(0, 8)}`;
+}
+
 // ============================================
 // PROJECTS
 // ============================================
@@ -70,6 +87,7 @@ export function useProjects() {
         id: uuidv4(),
         user_id: MOCK_USER.id,
         name: input.name,
+        slug: "",
         description: input.description || null,
         style_prompt: input.style_prompt || null,
         watermark_url: null,
@@ -79,6 +97,7 @@ export function useProjects() {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+      newProj.slug = buildProjectSlug(newProj.name, newProj.id);
       mockProjects = [newProj, ...mockProjects];
       setProjects([...mockProjects]);
       return newProj;
@@ -86,9 +105,10 @@ export function useProjects() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
+    const slug = `${slugifyProjectName(input.name)}-${uuidv4().slice(0, 8)}`;
     const { data, error } = await supabase
       .from("projects")
-      .insert({ user_id: user.id, ...input })
+      .insert({ user_id: user.id, ...input, slug })
       .select()
       .single();
     if (error) console.error("Failed to create project:", error.message);
@@ -122,15 +142,21 @@ export function useProject(projectId: string) {
 
   useEffect(() => {
     if (IS_MOCK_MODE) {
-      setProject(mockProjects.find((p) => p.id === projectId) || null);
+      setProject(mockProjects.find((p) => p.id === projectId || p.slug === projectId) || null);
       setLoading(false);
       return;
     }
     const supabase = createClient();
-    supabase.from("projects").select("*").eq("id", projectId).single().then(({ data }: { data: Project | null }) => {
-      setProject(data);
-      setLoading(false);
-    });
+    supabase
+      .from("projects")
+      .select("*")
+      .or(`id.eq.${projectId},slug.eq.${projectId}`)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }: { data: Project | null }) => {
+        setProject(data);
+        setLoading(false);
+      });
   }, [projectId]);
 
   return { project, loading };
@@ -139,21 +165,38 @@ export function useProject(projectId: string) {
 // ============================================
 // CHARACTERS + POSES
 // ============================================
-export function useCharacters(projectId: string) {
+export function useCharacters(projectRef: string) {
   const [characters, setCharacters] = useState<CharWithPoses[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (IS_MOCK_MODE) {
-      setCharacters(mockCharacters.filter((c) => c.project_id === projectId));
+      const project = mockProjects.find((p) => p.id === projectRef || p.slug === projectRef);
+      if (!project) {
+        setCharacters([]);
+        setLoading(false);
+        return;
+      }
+      setCharacters(mockCharacters.filter((c) => c.project_id === project.id));
       setLoading(false);
       return;
     }
     const supabase = createClient();
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id")
+      .or(`id.eq.${projectRef},slug.eq.${projectRef}`)
+      .limit(1)
+      .maybeSingle();
+    if (!project) {
+      setCharacters([]);
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase
       .from("characters")
       .select("*, character_poses(*)")
-      .eq("project_id", projectId)
+      .eq("project_id", project.id)
       .order("created_at");
     if (error) console.error("Failed to load characters:", error.message);
     const result = (data || []).map((c: Record<string, unknown>) => ({
@@ -162,7 +205,7 @@ export function useCharacters(projectId: string) {
     })) as CharWithPoses[];
     setCharacters(result);
     setLoading(false);
-  }, [projectId]);
+  }, [projectRef]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -170,7 +213,7 @@ export function useCharacters(projectId: string) {
     if (IS_MOCK_MODE) {
       const newChar: CharWithPoses = {
         id: uuidv4(),
-        project_id: projectId,
+        project_id: mockProjects.find((p) => p.id === projectRef || p.slug === projectRef)?.id || projectRef,
         name: input.name,
         description: input.description,
         personality: input.personality,
@@ -184,11 +227,18 @@ export function useCharacters(projectId: string) {
       return newChar;
     }
     const supabase = createClient();
-    const { data, error } = await supabase.from("characters").insert({ project_id: projectId, ...input }).select().single();
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id")
+      .or(`id.eq.${projectRef},slug.eq.${projectRef}`)
+      .limit(1)
+      .maybeSingle();
+    if (!project) return null;
+    const { data, error } = await supabase.from("characters").insert({ project_id: project.id, ...input }).select().single();
     if (error) console.error("Failed to create character:", error.message);
     await load();
     return data ? { ...data, poses: [] } as CharWithPoses : null;
-  }, [projectId, load]);
+  }, [projectRef, load]);
 
   const updateCharacter = useCallback(async (id: string, input: { name: string; description: string; personality: string }) => {
     if (IS_MOCK_MODE) {
@@ -246,15 +296,22 @@ export function useCharacters(projectId: string) {
         is_transparent: input.is_transparent,
         created_at: new Date().toISOString(),
       };
-      mockCharacters = mockCharacters.map((c) =>
-        c.id === characterId ? { ...c, poses: [...c.poses, newPose] } : c
-      );
+      mockCharacters = mockCharacters.map((c) => {
+        if (c.id !== characterId) return c;
+        const updated = { ...c, poses: [...c.poses, newPose] };
+        // Auto-set avatar to first pose if no avatar yet
+        if (!updated.avatar_url) {
+          updated.avatar_url = previewUrl;
+          updated.updated_at = new Date().toISOString();
+        }
+        return updated;
+      });
       await load();
       return;
     }
     const supabase = createClient();
     const fileExt = input.file.name.split(".").pop();
-    const filePath = `${projectId}/${characterId}/${Date.now()}.${fileExt}`;
+    const filePath = `${projectRef}/${characterId}/${Date.now()}.${fileExt}`;
     const { error: uploadError } = await supabase.storage.from("character-poses").upload(filePath, input.file);
     if (uploadError) throw uploadError;
     const { data: urlData } = supabase.storage.from("character-poses").getPublicUrl(filePath);
@@ -266,8 +323,13 @@ export function useCharacters(projectId: string) {
       description: input.description || null,
       is_transparent: input.is_transparent,
     });
+    // Auto-set avatar to first pose if no avatar yet
+    const char = characters.find((c) => c.id === characterId);
+    if (char && !char.avatar_url) {
+      await supabase.from("characters").update({ avatar_url: urlData.publicUrl }).eq("id", characterId);
+    }
     await load();
-  }, [projectId, load]);
+  }, [projectRef, load, characters]);
 
   const deletePose = useCallback(async (poseId: string) => {
     if (IS_MOCK_MODE) {
@@ -289,26 +351,43 @@ export function useCharacters(projectId: string) {
 // ============================================
 // MEMES
 // ============================================
-export function useMemes(projectId: string) {
+export function useMemes(projectRef: string) {
   const [memes, setMemes] = useState<Meme[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (IS_MOCK_MODE) {
-      setMemes(mockMemes.filter((m) => m.project_id === projectId));
+      const project = mockProjects.find((p) => p.id === projectRef || p.slug === projectRef);
+      if (!project) {
+        setMemes([]);
+        setLoading(false);
+        return;
+      }
+      setMemes(mockMemes.filter((m) => m.project_id === project.id));
       setLoading(false);
       return;
     }
     const supabase = createClient();
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id")
+      .or(`id.eq.${projectRef},slug.eq.${projectRef}`)
+      .limit(1)
+      .maybeSingle();
+    if (!project) {
+      setMemes([]);
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase
       .from("memes")
       .select("*")
-      .eq("project_id", projectId)
+      .eq("project_id", project.id)
       .order("created_at", { ascending: false });
     if (error) console.error("Failed to load memes:", error.message);
     setMemes(data || []);
     setLoading(false);
-  }, [projectId]);
+  }, [projectRef]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -323,7 +402,7 @@ export function useMemes(projectId: string) {
     if (IS_MOCK_MODE) {
       const newMeme: Meme = {
         id: uuidv4(),
-        project_id: projectId,
+        project_id: mockProjects.find((p) => p.id === projectRef || p.slug === projectRef)?.id || projectRef,
         title: null,
         original_idea: input.original_idea,
         generated_content: input.generated_content,
@@ -340,15 +419,23 @@ export function useMemes(projectId: string) {
       await load();
       return newMeme;
     }
+    const supabase = createClient();
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id")
+      .or(`id.eq.${projectRef},slug.eq.${projectRef}`)
+      .limit(1)
+      .maybeSingle();
+    if (!project) throw new Error("Project not found");
     const res = await fetch("/api/meme/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, ...input }),
+      body: JSON.stringify({ project_id: project.id, ...input }),
     });
     const data = await res.json();
     await load();
     return data.meme;
-  }, [projectId, load]);
+  }, [projectRef, load]);
 
   const remove = useCallback(async (id: string) => {
     if (IS_MOCK_MODE) {

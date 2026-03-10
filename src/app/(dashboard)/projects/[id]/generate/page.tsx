@@ -148,7 +148,7 @@ export default function GeneratePage() {
 
     try {
       const results = await generateContent({
-        project_id: projectId,
+        project_id: project?.id || projectId,
         idea: idea.trim(),
         characters,
         projectStyle: project?.style_prompt || undefined,

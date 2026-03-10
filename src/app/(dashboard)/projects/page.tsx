@@ -36,7 +36,7 @@ export default function ProjectsPage() {
       setShowCreate(false);
       setNewProject({ name: "", description: "", style_prompt: "" });
       toast.success(`Đã tạo dự án "${proj.name}"`);
-      router.push(`/projects/${proj.id}`);
+      router.push(`/projects/${proj.slug}`);
     } else {
       toast.error("Không thể tạo dự án. Vui lòng thử lại.");
     }
@@ -105,7 +105,7 @@ export default function ProjectsPage() {
               <Card
                 key={project.id}
                 hover
-                onClick={() => router.push(`/projects/${project.id}`)}
+                onClick={() => router.push(`/projects/${project.slug}`)}
                 className="relative group"
               >
                 <div className="p-5">
@@ -129,7 +129,7 @@ export default function ProjectsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/projects/${project.id}`);
+                              router.push(`/projects/${project.slug}`);
                               setMenuOpen(null);
                             }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm th-text-secondary th-bg-hover"

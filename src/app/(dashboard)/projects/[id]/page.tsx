@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useProject, useCharacters, useMemes } from "@/lib/use-store";
 import Sidebar from "@/components/layout/sidebar";
 import Card, { CardContent } from "@/components/ui/card";
@@ -128,18 +129,18 @@ export default function ProjectOverviewPage() {
             </div>
             <div className="flex gap-4 overflow-x-auto pb-2">
               {characters.slice(0, 6).map((char) => (
-                <div key={char.id} className="flex-shrink-0 w-24 text-center">
-                  <div className="w-20 h-20 mx-auto th-bg-tertiary rounded-2xl overflow-hidden mb-2 flex items-center justify-center text-2xl font-bold th-text-muted">
-                    {char.avatar_url ? (
+                <Link key={char.id} href={`/projects/${projectId}/characters/${char.id}`} className="flex-shrink-0 w-24 text-center group">
+                  <div className="w-20 h-20 mx-auto th-bg-tertiary rounded-2xl overflow-hidden mb-2 flex items-center justify-center text-2xl font-bold th-text-muted transition-transform group-hover:scale-105 group-hover:ring-2 th-ring-accent">
+                    {(char.avatar_url || char.poses[0]?.image_url) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={char.avatar_url} alt={char.name} className="w-full h-full object-cover" />
+                      <img src={(char.avatar_url || char.poses[0]?.image_url)!} alt={char.name} className="w-full h-full object-cover" />
                     ) : (
                       char.name[0]?.toUpperCase()
                     )}
                   </div>
                   <p className="text-xs th-text-secondary truncate">{char.name}</p>
                   <p className="text-xs th-text-muted">{char.poses.length} biểu cảm</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
