@@ -146,7 +146,7 @@ ${referenceImages?.length
       responseModalities: ["TEXT", "IMAGE"],
       imageConfig: {
         aspectRatio: aspectRatio,
-        imageSize: "2K",
+        imageSize: "1K",
       },
     },
   });

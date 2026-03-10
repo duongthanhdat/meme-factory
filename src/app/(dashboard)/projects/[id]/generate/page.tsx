@@ -49,6 +49,7 @@ export default function GeneratePage() {
   const [generating, setGenerating] = useState(false);
   const [variations, setVariations] = useState<ContentVariation[]>([]);
   const [selectedVariation, setSelectedVariation] = useState(0);
+  const [hasPickedVariation, setHasPickedVariation] = useState(false);
   const [format, setFormat] = useState<MemeFormat>("1:1");
   const [saving, setSaving] = useState(false);
 
@@ -300,6 +301,7 @@ export default function GeneratePage() {
         }));
         setVariations(mapped);
         setSelectedVariation(0);
+        setHasPickedVariation(false);
         setStep(2);
       }
     } catch (error) {
@@ -349,6 +351,7 @@ export default function GeneratePage() {
 
     setVariations([directVariation]);
     setSelectedVariation(0);
+    setHasPickedVariation(true);
     setTaggedCharacterIds(new Set(selectedChars.map((c) => c.id)));
     setAiCustomPrompt((prev) => (prev.trim() ? prev : promptWithoutMentions));
     setStep(3);
@@ -504,6 +507,7 @@ export default function GeneratePage() {
     setIdea("");
     setVariations([]);
     setSelectedVariation(0);
+    setHasPickedVariation(false);
     setAiImageBase64(null);
     setAiError(null);
     setAiCustomPrompt("");
@@ -784,10 +788,10 @@ export default function GeneratePage() {
         {/* Step 2: Select variation */}
         {step === 2 && (
           <div className="space-y-5">
-            <p className="text-sm th-text-secondary">AI đã tạo {variations.length} phiên bản. Chọn phiên bản bạn thích:</p>
+            <p className="text-sm th-text-secondary">AI đã tạo {variations.length} phiên bản. Hãy bấm chọn 1 phiên bản trước khi tiếp tục.</p>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {variations.map((v, index) => (
-                <Card key={index} hover onClick={() => setSelectedVariation(index)}
+                <Card key={index} hover onClick={() => { setSelectedVariation(index); setHasPickedVariation(true); }}
                   className={selectedVariation === index ? "th-border-accent th-shadow-lg" : ""}>
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -823,7 +827,7 @@ export default function GeneratePage() {
             </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setStep(1)}>Quay lại</Button>
-              <Button onClick={() => setStep(3)}>Tiếp tục xem trước <ChevronRight size={16} /></Button>
+              <Button onClick={() => setStep(3)} disabled={!hasPickedVariation}>Tiếp tục xem trước <ChevronRight size={16} /></Button>
             </div>
           </div>
         )}

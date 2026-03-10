@@ -25,6 +25,7 @@ import {
   Wand2,
   Loader2,
   RotateCcw,
+  Download,
 } from "lucide-react";
 import { BulkUploader } from "@/components/ui/bulk-uploader";
 import type { Character, EmotionTag } from "@/types/database";
@@ -266,6 +267,14 @@ export default function CharactersPage() {
     }
 
     setAiPoseSaving(false);
+  };
+
+  const handleDownloadAiPose = () => {
+    if (!aiPoseImage) return;
+    const link = document.createElement("a");
+    link.download = `pose-ai-${aiPoseEmotion}-${Date.now()}.png`;
+    link.href = `data:image/png;base64,${aiPoseImage}`;
+    link.click();
   };
 
   return (
@@ -683,6 +692,9 @@ export default function CharactersPage() {
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1" onClick={handleAiPoseGenerate}>
                     <RotateCcw size={14} /> Tạo lại (3 pts)
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={handleDownloadAiPose}>
+                    <Download size={14} /> Tải ảnh
                   </Button>
                   <Button className="flex-1" onClick={handleSaveAiPose} loading={aiPoseSaving}>
                     <ImageIcon size={14} /> Lưu Pose
