@@ -42,14 +42,20 @@ export async function POST(req: Request) {
     }
 
     // Payment info from env
+    // IMPORTANT: bankAcc = số tài khoản thật trên ngân hàng (dùng cho QR)
+    //            bankVA  = tài khoản ảo Sepay, có prefix "VA" (dùng cho webhook matching)
     const bankBin = process.env.SEPAY_BANK_BIN || "970418";
     const bankAcc = process.env.SEPAY_BANK_ACCOUNT || "";
     const bankVA = process.env.SEPAY_BANK_VA || "";
     const bankName = process.env.SEPAY_BANK_NAME || "BIDV";
     const accountName = process.env.SEPAY_ACCOUNT_NAME || "";
-    const beneficiary = bankVA || bankAcc;
 
-    if (!beneficiary) {
+    // QR code phải dùng STK thật (bankAcc) — ngân hàng không nhận VA prefix
+    const qrAccount = bankAcc || bankVA;
+    // Webhook matching dùng VA (Sepay trả subAccount với VA prefix)
+    const paymentId = bankVA || bankAcc;
+
+    if (!qrAccount) {
       return NextResponse.json({ error: "Chưa cấu hình tài khoản ngân hàng" }, { status: 500 });
     }
 
@@ -60,7 +66,7 @@ export async function POST(req: Request) {
         user_id: user.id,
         amount,
         status: "pending",
-        payment_id: beneficiary,
+        payment_id: paymentId,
       })
       .select("id")
       .single();
@@ -71,9 +77,9 @@ export async function POST(req: Request) {
 
     const orderId: string = newOrder.id;
     const description = `TL${orderId.substring(0, 8).toUpperCase()}`;
-    // Use VietQR (img.vietqr.io) — more reliable than qr.sepay.vn which gets blocked by Cloudflare
-    // Format: https://img.vietqr.io/image/{BANK_BIN}-{ACCOUNT}-{TEMPLATE}.png?amount={}&addInfo={}&accountName={}
-    const qrUrl = `https://img.vietqr.io/image/${encodeURIComponent(bankBin)}-${encodeURIComponent(beneficiary)}-compact.png?amount=${encodeURIComponent(amount)}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
+    // VietQR — chuẩn NAPAS, tất cả app ngân hàng VN hỗ trợ
+    // Dùng bankAcc (STK thật, không có VA prefix) cho QR
+    const qrUrl = `https://img.vietqr.io/image/${encodeURIComponent(bankBin)}-${encodeURIComponent(qrAccount)}-compact.png?amount=${encodeURIComponent(amount)}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
 
     return NextResponse.json({
       success: true,
@@ -81,7 +87,7 @@ export async function POST(req: Request) {
       amount,
       description,
       qrUrl,
-      beneficiary,
+      beneficiary: qrAccount,
       bankBin,
       bankName,
       accountName,
