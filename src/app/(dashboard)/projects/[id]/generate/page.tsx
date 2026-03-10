@@ -10,7 +10,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import MemeCanvas, { MemeCanvasHandle } from "@/components/meme/meme-canvas";
 import { useToast } from "@/components/ui/toast";
-import { Zap, Sparkles, Download, Save, RotateCcw, ChevronRight, Check, Wand2, Layers, ImageIcon, Loader2, Upload, X } from "lucide-react";
+import { Zap, Sparkles, Download, Save, RotateCcw, ChevronRight, Check, Wand2, Layers, ImageIcon, Loader2, Upload, X, Tags } from "lucide-react";
 import type { MemeContent, MemeFormat, SelectedCharacter, EmotionTag } from "@/types/database";
 import { FORMAT_DIMENSIONS } from "@/types/database";
 import { useWallet } from "@/contexts/WalletContext";
@@ -72,6 +72,10 @@ export default function GeneratePage() {
   // Reference images for meme ideas
   const [refImages, setRefImages] = useState<{ file: File; preview: string; base64: string; mimeType: string }[]>([]);
   const refInputRef = useRef<HTMLInputElement>(null);
+  const [aiRefImages, setAiRefImages] = useState<{ file: File; preview: string; base64: string; mimeType: string }[]>([]);
+  const aiRefInputRef = useRef<HTMLInputElement>(null);
+  const [aiCustomPrompt, setAiCustomPrompt] = useState("");
+  const [taggedCharacterIds, setTaggedCharacterIds] = useState<Set<string>>(new Set());
   const MAX_REF_IMAGES = 4;
   const MAX_REF_SIZE_MB = 5;
 
@@ -118,6 +122,44 @@ export default function GeneratePage() {
     });
   }, []);
 
+  const addAiRefImages = useCallback(async (files: File[]) => {
+    const remaining = MAX_REF_IMAGES - aiRefImages.length;
+    if (remaining <= 0) return;
+
+    const validFiles = files
+      .filter((f) => f.type.startsWith("image/"))
+      .filter((f) => f.size <= MAX_REF_SIZE_MB * 1024 * 1024)
+      .slice(0, remaining);
+
+    const newImages = await Promise.all(
+      validFiles.map(async (file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+        base64: await fileToBase64(file),
+        mimeType: file.type,
+      }))
+    );
+
+    setAiRefImages((prev) => [...prev, ...newImages]);
+  }, [aiRefImages.length]);
+
+  const removeAiRefImage = useCallback((index: number) => {
+    setAiRefImages((prev) => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
+  const toggleTaggedCharacter = (characterId: string) => {
+    setTaggedCharacterIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(characterId)) next.delete(characterId);
+      else next.add(characterId);
+      return next;
+    });
+  };
+
   // Clipboard paste handler for reference images (Step 1 only)
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -141,6 +183,12 @@ export default function GeneratePage() {
     document.addEventListener("paste", handlePaste);
     return () => document.removeEventListener("paste", handlePaste);
   }, [step, addRefImages]);
+
+  useEffect(() => {
+    const selected = variations[selectedVariation];
+    if (!selected) return;
+    setTaggedCharacterIds(new Set(selected.suggested_characters.map((c) => c.character_id)));
+  }, [selectedVariation, variations]);
 
   const handleGenerate = async () => {
     if (!idea.trim()) return;
@@ -223,14 +271,26 @@ export default function GeneratePage() {
     setAiImageBase64(null);
 
     try {
-      const charParams = v.suggested_characters.map((sc) => {
-        const char = characters.find((c) => c.id === sc.character_id);
-        return {
-          name: sc.character_name,
-          emotion: sc.suggested_emotion || sc.emotion,
-          description: char?.description,
-        };
-      });
+      const taggedCharacters = characters.filter((c) => taggedCharacterIds.has(c.id));
+      const sourceCharacters = taggedCharacters.length > 0
+        ? taggedCharacters.map((char) => {
+            const suggested = v.suggested_characters.find((sc) => sc.character_id === char.id);
+            return {
+              name: char.name,
+              emotion: suggested?.suggested_emotion || suggested?.emotion || "neutral",
+              description: char.description,
+            };
+          })
+        : v.suggested_characters.map((sc) => {
+            const char = characters.find((c) => c.id === sc.character_id);
+            return {
+              name: sc.character_name,
+              emotion: sc.suggested_emotion || sc.emotion,
+              description: char?.description,
+            };
+          });
+
+      const mergedRefImages = [...refImages, ...aiRefImages].slice(0, 4);
 
       const result = await generateImage({
         type: "meme",
@@ -238,12 +298,13 @@ export default function GeneratePage() {
         subtext: v.subtext,
         tone: v.tone,
         textPosition: v.text_position,
-        characters: charParams,
+        characters: sourceCharacters,
         format,
         style: project?.style_prompt || undefined,
+        customPrompt: aiCustomPrompt.trim() || undefined,
         backgroundDescription: bgImageBase64 ? undefined : bgPrompt || undefined,
-        referenceImages: refImages.length > 0
-          ? refImages.map((img) => ({ base64: img.base64, mimeType: img.mimeType }))
+        referenceImages: mergedRefImages.length > 0
+          ? mergedRefImages.map((img) => ({ base64: img.base64, mimeType: img.mimeType }))
           : undefined,
       });
 
@@ -355,9 +416,13 @@ export default function GeneratePage() {
     setBgImageBase64(null);
     setBgPrompt("");
     setBgError(null);
+    setAiCustomPrompt("");
+    setTaggedCharacterIds(new Set());
     // Clean up reference image object URLs
     refImages.forEach((img) => URL.revokeObjectURL(img.preview));
+    aiRefImages.forEach((img) => URL.revokeObjectURL(img.preview));
     setRefImages([]);
+    setAiRefImages([]);
   };
 
   if (loading) {
@@ -729,6 +794,102 @@ export default function GeneratePage() {
                   ))}
                 </CardContent>
               </Card>
+
+              {/* AI reference and prompt controls */}
+              {renderMode === "ai" && (
+                <Card>
+                  <CardHeader><h3 className="text-sm font-semibold th-text-primary">Ref ảnh + Prompt AI</h3></CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium th-text-secondary mb-2 flex items-center gap-1.5">
+                        <ImageIcon size={12} /> Ảnh tham khảo cho bước tạo ảnh
+                      </p>
+                      <div
+                        className="border-2 border-dashed rounded-xl p-3 text-center transition-colors cursor-pointer th-border th-bg-hover"
+                        onClick={() => aiRefInputRef.current?.click()}
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          addAiRefImages(Array.from(e.dataTransfer.files));
+                        }}
+                      >
+                        <input
+                          ref={aiRefInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            addAiRefImages(files);
+                            e.target.value = "";
+                          }}
+                        />
+                        {aiRefImages.length === 0 ? (
+                          <div className="py-1">
+                            <Upload size={18} className="mx-auto mb-1 th-text-muted" />
+                            <p className="text-xs th-text-tertiary">Thả ảnh meme mẫu để AI học bố cục/style</p>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2 flex-wrap justify-center">
+                            {aiRefImages.map((img, idx) => (
+                              <div key={idx} className="relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={img.preview} alt={`AI ref ${idx + 1}`} className="w-14 h-14 object-cover rounded-lg border" style={{ borderColor: "var(--border-primary)" }} />
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); removeAiRefImage(idx); }}
+                                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-white"
+                                  style={{ background: "var(--danger, #ef4444)" }}
+                                >
+                                  <X size={10} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium th-text-secondary mb-2 flex items-center gap-1.5">
+                        <Tags size={12} /> Tag nhân vật xuất hiện trong ảnh
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {characters.map((char) => {
+                          const active = taggedCharacterIds.has(char.id);
+                          return (
+                            <button
+                              key={char.id}
+                              type="button"
+                              onClick={() => toggleTaggedCharacter(char.id)}
+                              className={`px-2.5 py-1 rounded-lg text-xs border transition-all ${
+                                active
+                                  ? "th-border-accent th-bg-accent-light th-text-accent"
+                                  : "th-bg-tertiary th-border th-text-secondary th-bg-hover"
+                              }`}
+                            >
+                              {char.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium th-text-secondary mb-1.5">Prompt bổ sung</p>
+                      <Textarea
+                        id="ai-custom-prompt"
+                        placeholder="VD: Bám bố cục ảnh ref số 1, headline đặt giữa, tone châm biếm nhẹ, nhân vật bên trái nhìn vào chart đỏ..."
+                        value={aiCustomPrompt}
+                        onChange={(e) => setAiCustomPrompt(e.target.value)}
+                        rows={3}
+                        className="text-xs"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Background — only show for Canvas mode */}
               {renderMode === "canvas" && (

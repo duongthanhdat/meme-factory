@@ -32,6 +32,7 @@ export async function generateMemeImage(params: {
   subtext?: string;
   tone: string;
   textPosition: string;
+  customPrompt?: string;
   characters: {
     name: string;
     emotion: string;
@@ -56,6 +57,7 @@ export async function generateMemeImage(params: {
     style,
     backgroundDescription,
     referenceImages,
+    customPrompt,
   } = params;
 
   const charDescriptions = characters
@@ -80,6 +82,7 @@ ${charDescriptions || "(Không có nhân vật cụ thể — tạo illustration
 ${backgroundDescription ? `BACKGROUND: ${backgroundDescription}` : "Background: Màu gradient hoặc scene đơn giản phù hợp nội dung, không quá phức tạp để text vẫn dễ đọc."}
 
 ${style ? `PHONG CÁCH: ${style}` : defaultMemeStyle}
+${customPrompt ? `\nYÊU CẦU BỔ SUNG TỪ NGƯỜI DÙNG: ${customPrompt}` : ""}
 
 YÊU CẦU BẮT BUỘC:
 1. TEXT HEADLINE phải: font đậm (bold), kích thước LỚN, có viền đen/shadow để nổi bật trên mọi background, DỄ ĐỌC ngay từ thumbnail

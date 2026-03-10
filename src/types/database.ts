@@ -165,6 +165,7 @@ export interface ImageGenMemeParams {
   subtext?: string;
   tone: string;
   textPosition: string;
+  customPrompt?: string;
   characters: {
     name: string;
     emotion: string;
