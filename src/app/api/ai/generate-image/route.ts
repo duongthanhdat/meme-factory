@@ -136,20 +136,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Unknown type" }, { status: 400 });
     }
 
-    // Record point usage transaction (only on success)
-    if (cost > 0) {
-      const { error: txError } = await supabaseAdmin.from("transactions").insert({
-        user_id: user.id,
-        amount: 0,
-        type: "payment",
-        description: `${POINT_LABELS[action]} (-${cost} points)`,
-        status: "completed",
-      });
-      if (txError) {
-        throw new Error("POINT_TX_FAILED");
-      }
-    }
-
     return NextResponse.json({
       image: result.image,
       text: result.text,
