@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { IS_MOCK_MODE } from "@/lib/use-store";
 import Button from "@/components/ui/button";
@@ -15,14 +15,32 @@ function isSupabaseConfigured(): boolean {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const configured = isSupabaseConfigured();
+  const redirectPath = useMemo(() => {
+    const next = searchParams.get("next");
+    if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+    return "/projects";
+  }, [searchParams]);
+
+  useEffect(() => {
+    const errorCode = searchParams.get("error");
+    if (!errorCode) return;
+
+    if (errorCode === "auth_failed") {
+      setError("Đăng nhập thất bại. Vui lòng thử lại.");
+    } else if (errorCode === "oauth_failed") {
+      setError("Đăng nhập Google thất bại hoặc đã bị huỷ.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +61,9 @@ export default function LoginPage() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/projects` },
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
+          },
         });
         if (error) throw error;
         setMessage("Kiểm tra email để xác nhận tài khoản!");
@@ -53,7 +73,8 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
-        window.location.href = "/projects";
+        router.replace(redirectPath);
+        router.refresh();
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Có lỗi xảy ra";
@@ -77,11 +98,22 @@ export default function LoginPage() {
       setError("Supabase chưa được cấu hình");
       return;
     }
+
+    setGoogleLoading(true);
+    setError(null);
+
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/projects` },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}` },
+      });
+      if (error) throw error;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Không thể đăng nhập Google";
+      setError(msg);
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -171,7 +203,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" size="lg" loading={loading}>
+            <Button type="submit" className="w-full" size="lg" loading={loading} disabled={googleLoading}>
               {isSignUp ? "Tạo tài khoản" : "Đăng nhập"}
             </Button>
           </form>
@@ -187,6 +219,8 @@ export default function LoginPage() {
             className="w-full"
             size="lg"
             onClick={handleGoogleLogin}
+            loading={googleLoading}
+            disabled={loading}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -194,13 +228,15 @@ export default function LoginPage() {
               <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
               <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
-            Tiếp tục với Google
+            {googleLoading ? "Đang chuyển tới Google..." : "Tiếp tục với Google"}
           </Button>
 
           <p className="text-center text-sm th-text-tertiary mt-5">
             {isSignUp ? "Đã có tài khoản?" : "Chưa có tài khoản?"}{" "}
             <button
+              type="button"
               onClick={() => {
+                if (loading || googleLoading) return;
                 setIsSignUp(!isSignUp);
                 setError(null);
                 setMessage(null);

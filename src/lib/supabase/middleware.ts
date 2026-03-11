@@ -58,13 +58,22 @@ export async function updateSession(request: NextRequest) {
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+    url.searchParams.set("next", nextPath);
     return NextResponse.redirect(url);
   }
 
   // Redirect to dashboard if authenticated and on login page
   if (user && request.nextUrl.pathname.startsWith("/login")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/projects";
+    const next = request.nextUrl.searchParams.get("next");
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      url.pathname = next;
+      url.search = "";
+    } else {
+      url.pathname = "/projects";
+      url.search = "";
+    }
     return NextResponse.redirect(url);
   }
 

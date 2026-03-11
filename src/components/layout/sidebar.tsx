@@ -36,6 +36,7 @@ export default function Sidebar({ projectId, projectName }: SidebarProps) {
   const { points, isLoading: walletLoading } = useWallet();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Check admin role
   useEffect(() => {
@@ -79,11 +80,20 @@ export default function Sidebar({ projectId, projectName }: SidebarProps) {
   }, [mobileOpen]);
 
   const handleSignOut = async () => {
-    if (!IS_MOCK_MODE) {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+    setSigningOut(true);
+    try {
+      if (!IS_MOCK_MODE) {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      }
+    } catch {
+      // Ignore and force navigation to login
+    } finally {
+      setMobileOpen(false);
+      router.replace("/login");
+      router.refresh();
+      setSigningOut(false);
     }
-    router.push("/login");
   };
 
   const mainNav = [
@@ -190,10 +200,11 @@ export default function Sidebar({ projectId, projectName }: SidebarProps) {
         <button
           onClick={handleSignOut}
           aria-label="Đăng xuất"
+          disabled={signingOut}
           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-all cursor-pointer th-text-danger th-bg-hover"
         >
           <LogOut size={18} />
-          Đăng xuất
+          {signingOut ? "Đang đăng xuất..." : "Đăng xuất"}
         </button>
       </div>
     </>

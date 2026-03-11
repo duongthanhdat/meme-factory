@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/projects";
+  const oauthError = searchParams.get("error");
 
   // Prevent open redirect — only allow relative paths
   const safePath = next.startsWith("/") && !next.startsWith("//") ? next : "/projects";
@@ -17,5 +18,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  const errorCode = oauthError ? "oauth_failed" : "auth_failed";
+  return NextResponse.redirect(`${origin}/login?error=${errorCode}&next=${encodeURIComponent(safePath)}`);
 }
