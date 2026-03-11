@@ -18,7 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+
 import { useTheme } from "@/components/theme-provider";
 import { IS_MOCK_MODE } from "@/lib/use-store";
 import { useWallet } from "@/contexts/WalletContext";
@@ -31,7 +31,6 @@ interface SidebarProps {
 
 export default function Sidebar({ projectId, projectName }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { points, isLoading: walletLoading } = useWallet();
   const [mobileOpen, setMobileOpen] = useState(false);
