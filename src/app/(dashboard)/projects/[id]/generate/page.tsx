@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useProject, useCharacters, useMemes, generateContent, generateImage } from "@/lib/use-store";
 import Sidebar from "@/components/layout/sidebar";
 import Button from "@/components/ui/button";
@@ -43,11 +43,12 @@ interface ContentVariation {
 
 export default function GeneratePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const projectId = params.id as string;
 
   const { project, loading: projLoading } = useProject(projectId);
   const { characters, loading: charsLoading, createCharacter } = useCharacters(projectId);
-  const { saveMeme } = useMemes(projectId);
+  const { memes, saveMeme } = useMemes(projectId);
 
   const toast = useToast();
   const { points, refreshBalance } = useWallet();
@@ -92,6 +93,10 @@ export default function GeneratePage() {
   });
   const MAX_REF_IMAGES = 4;
   const MAX_REF_SIZE_MB = 5;
+
+  const fromMemeId = searchParams.get("fromMeme");
+  const fromMode = searchParams.get("mode");
+  const [prefillAppliedKey, setPrefillAppliedKey] = useState<string | null>(null);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -296,6 +301,62 @@ export default function GeneratePage() {
       setWatermarkText(project.name);
     }
   }, [project?.name, watermarkText]);
+
+  const mapMemeToVariation = useCallback((meme: { generated_content: MemeContent; selected_characters: SelectedCharacter[] }): ContentVariation => {
+    const content = meme.generated_content;
+    const selectedChars = meme.selected_characters || [];
+
+    return {
+      content,
+      suggested_characters: selectedChars.map((sc) => ({
+        ...sc,
+        reasoning: "Từ meme đã lưu",
+        pose_id: sc.pose_id || "",
+        pose_name: sc.pose_name || "",
+        suggested_emotion: sc.emotion || "neutral",
+      })),
+      headline: content?.headline || "",
+      subtext: content?.subtext,
+      caption: content?.caption,
+      image_prompt: content?.image_prompt,
+      text_rendering_notes: content?.text_rendering_notes,
+      tone: content?.tone || "theo meme cũ",
+      text_position: content?.layout_suggestion?.text_position || "top",
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!fromMemeId || !fromMode || memes.length === 0) return;
+
+    const key = `${fromMode}:${fromMemeId}`;
+    if (prefillAppliedKey === key) return;
+
+    const sourceMeme = memes.find((m) => m.id === fromMemeId);
+    if (!sourceMeme) return;
+
+    setIdea(sourceMeme.original_idea || "");
+    setFormat(sourceMeme.format);
+    setEnableWatermark(Boolean(sourceMeme.has_watermark));
+
+    if (fromMode === "reuse") {
+      setStep(1);
+      setPrefillAppliedKey(key);
+      return;
+    }
+
+    if (fromMode === "regenerate") {
+      const variation = mapMemeToVariation(sourceMeme);
+      setVariations([variation]);
+      setSelectedVariation(0);
+      setHasPickedVariation(true);
+      setTaggedCharacterIds(new Set((sourceMeme.selected_characters || []).map((c) => c.character_id)));
+      setAiCustomPrompt("");
+      setAiImageBase64(null);
+      setAiError(null);
+      setStep(3);
+      setPrefillAppliedKey(key);
+    }
+  }, [fromMemeId, fromMode, memes, prefillAppliedKey, mapMemeToVariation]);
 
   const handleGenerate = async () => {
     if (!idea.trim()) return;
@@ -638,6 +699,18 @@ export default function GeneratePage() {
             </Button>
           )}
         </div>
+
+        {fromMemeId && fromMode === "regenerate" && (
+          <div className="mb-4 p-3 rounded-xl border th-border-accent th-bg-accent-light">
+            <p className="text-sm th-text-accent">Đang ở chế độ tạo biến thể từ meme đã lưu. Bạn có thể chỉnh prompt rồi bấm "Tạo ảnh bằng AI".</p>
+          </div>
+        )}
+
+        {fromMemeId && fromMode === "reuse" && (
+          <div className="mb-4 p-3 rounded-xl border" style={{ borderColor: "var(--border-primary)", background: "var(--bg-card)" }}>
+            <p className="text-sm th-text-secondary">Đã điền lại ý tưởng từ meme cũ. Bạn có thể sửa ý tưởng rồi tạo lại nội dung AI.</p>
+          </div>
+        )}
 
         {/* Steps indicator */}
         <div className="flex items-center gap-3 mb-8">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useProject, useMemes } from "@/lib/use-store";
 import Sidebar from "@/components/layout/sidebar";
 import Button from "@/components/ui/button";
@@ -21,11 +21,14 @@ import {
   Package,
   Loader2,
   CheckCircle,
+  Wand2,
+  Sparkles,
 } from "lucide-react";
 import type { MemeContent } from "@/types/database";
 
 export default function GalleryPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.id as string;
   const toast = useToast();
 
@@ -97,6 +100,14 @@ export default function GalleryPage() {
       .catch(() => {
         toast.error("Không thể sao chép");
       });
+  };
+
+  const goRegenerate = (memeId: string) => {
+    router.push(`/projects/${projectId}/generate?fromMeme=${encodeURIComponent(memeId)}&mode=regenerate`);
+  };
+
+  const goReuseIdea = (memeId: string) => {
+    router.push(`/projects/${projectId}/generate?fromMeme=${encodeURIComponent(memeId)}&mode=reuse`);
   };
 
   const handleBulkDownload = useCallback(async () => {
@@ -339,6 +350,28 @@ export default function GalleryPage() {
                         style={{ background: "var(--bg-overlay)" }}
                       >
                         <button
+                          aria-label="Tạo biến thể từ meme này"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            goRegenerate(meme.id);
+                          }}
+                          className="p-2 bg-violet-500/40 rounded-xl hover:bg-violet-500/60 transition-colors"
+                          title="Tạo biến thể"
+                        >
+                          <Sparkles size={18} className="text-white" />
+                        </button>
+                        <button
+                          aria-label="Dùng lại ý tưởng"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            goReuseIdea(meme.id);
+                          }}
+                          className="p-2 bg-blue-500/40 rounded-xl hover:bg-blue-500/60 transition-colors"
+                          title="Dùng lại ý tưởng"
+                        >
+                          <Wand2 size={18} className="text-white" />
+                        </button>
+                        <button
                           aria-label="Tải xuống meme"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -430,6 +463,12 @@ export default function GalleryPage() {
                       <span className="px-1.5 py-0.5 th-bg-tertiary rounded">{selected.format}</span>
                     </div>
                     <div className="flex gap-2 pt-2">
+                      <Button variant="outline" size="sm" onClick={() => goRegenerate(selected.id)}>
+                        <Sparkles size={14} /> Tạo biến thể
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => goReuseIdea(selected.id)}>
+                        <Wand2 size={14} /> Dùng lại idea
+                      </Button>
                       <Button size="sm" onClick={() => handleDownload(selected.image_url, selected.id)}>
                         <Download size={14} /> Tải xuống
                       </Button>
