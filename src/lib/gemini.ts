@@ -57,9 +57,9 @@ export async function generateMemeContent(params: {
 
   const hasRefImages = referenceImages && referenceImages.length > 0;
 
-  const prompt = `Bạn là admin fanpage meme Việt Nam lâu năm, chuyên viết content viral. Bạn hiểu rõ cách nói chuyện trên mạng xã hội VN — tự nhiên, đời thường, đọc lên phải thấy "đúng quá đi" chứ không phải "AI viết".
+  const prompt = `Bạn là admin fanpage meme Việt Nam lâu năm, chuyên viết content viral. Bạn hiểu rõ cách nói chuyện trên mạng xã hội VN: tự nhiên, sắc, đời thường, hơi láo đúng lúc. Đọc lên phải thấy như người thật nghĩ ra, không phải AI hay copywriter.
 
-NHIỆM VỤ: Viết ${numVariations} phiên bản meme từ ý tưởng bên dưới. Mỗi phiên bản phải khác nhau về góc nhìn hoặc cách kể.
+NHIỆM VỤ: Viết ${numVariations} phiên bản meme từ ý tưởng bên dưới. Mỗi phiên bản phải khác nhau rõ ràng về góc nhìn hoặc cách đẩy joke.
 
 Ý TƯỞNG: "${idea}"
 ${hasRefImages ? `\nẢNH THAM KHẢO: User đính kèm ${referenceImages!.length} ảnh. Phân tích context, mood, style từ ảnh để content sát thực tế hơn.` : ""}
@@ -72,11 +72,10 @@ ${characterList || "(Chưa có nhân vật sẵn)"}
 NHÂN VẬT MENTION 1 LẦN:
 ${adHocCharacters.length > 0 ? adHocCharacters.map((n) => `- ${n}`).join("\n") : "(Không có)"}
 
-=== GIỌNG VĂN — ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT ===
+=== GIỌNG VĂN — QUAN TRỌNG NHẤT ===
+Headline PHẢI giống cách người Việt thực sự nói/nghĩ. Hãy tưởng tượng đây là câu người ta lẩm bẩm trong đầu, nhắn trong group chat, hoặc post story than thở.
 
-Headline PHẢI viết giống cách người Việt thực sự nói/nghĩ, không phải giọng copywriter hay AI. Hãy tưởng tượng bạn đang nhắn tin cho bạn bè hoặc đang tự chửi thầm trong đầu.
-
-VÍ DỤ HEADLINE HAY (tự nhiên, đúng giọng):
+VÍ DỤ HEADLINE HAY:
 - "Lương chưa về mà Shopee đã gửi mã"
 - "Khi sếp nói 'cuối tuần rảnh không'"
 - "Thứ 2 lại đến rồi, ai cho nó đến vậy"
@@ -86,39 +85,60 @@ VÍ DỤ HEADLINE HAY (tự nhiên, đúng giọng):
 - "Ơ sao tự nhiên tháng này hết tiền sớm vậy"
 - "Thị trường xanh nhưng mã mình vẫn đỏ như thường"
 
-VÍ DỤ HEADLINE DỞ (gượng, giọng AI/robot — TRÁNH):
-- "Hành trình tài chính đầy thử thách!" ← giọng PR
-- "Khi công nghệ và đam mê gặp nhau" ← giọng sách self-help
-- "Nỗi đau của nhà đầu tư thông minh" ← quá văn vẻ
-- "Chiến binh thị trường chứng khoán" ← cringe, không ai nói vậy
-- "Cùng nhau vượt qua khó khăn nào!" ← giọng MC event
-- "Đây chính là khoảnh khắc đáng nhớ" ← generic, vô hồn
+VÍ DỤ GƯỢNG / AI VIBE — CẤM DÙNG:
+- "Hành trình tài chính đầy thử thách!"
+- "Khi công nghệ và đam mê gặp nhau"
+- "Nỗi đau của nhà đầu tư thông minh"
+- "Chiến binh thị trường chứng khoán"
+- "Cùng nhau vượt qua khó khăn nào!"
+- "Đây chính là khoảnh khắc đáng nhớ"
+- "Bài học sâu sắc sau biến động"
+- "Trạng thái cảm xúc khó diễn tả"
 
 NGUYÊN TẮC VIẾT:
-- Viết như ĐANG KỂ CHUYỆN hoặc THAN THỞ, không phải đang quảng cáo
-- Dùng từ ngữ đời thường: "ơ", "ủa", "vậy", "quá trời", "éo", "chán vl"... (tuỳ tone)
-- Headline nên là 1 câu/tình huống cụ thể, không phải slogan chung chung
-- Caption viết như đang nói chuyện với follower, có thể hỏi ngược "Ai giống tao không?"
-- Nếu chủ đề là chứng khoán/crypto: dùng đúng tiếng lóng — "cháy tài khoản", "bắt đáy", "hold", "lên đỉnh", "about nền", "xanh lá", "đỏ lửa"
-- Nếu chủ đề đời sống: dùng tình huống cụ thể ai cũng gặp, tránh triết lý chung chung
-- ĐƯỢC phép dùng headline dài hơn nếu cần (tối đa 80 ký tự) — đừng cắt cụt câu chỉ vì ngắn
-- Subtext CHỈ dùng khi thực sự cần punchline thêm, không bắt buộc
-- Caption ngắn gọn, 1-2 câu, giọng nói chuyện — hoặc để trống nếu headline đã đủ
+- Viết như đang kể chuyện, than, cà khịa hoặc tự bóc phốt bản thân
+- Ưu tiên 1 tình huống cụ thể, có thể hình dung ngay, thay vì ý lớn chung chung
+- Headline tối đa 2 vế; tránh văn mẫu, tránh khẩu hiệu, tránh triết lý sống
+- Được phép dùng từ rất đời thường nếu hợp tone: "ơ", "ủa", "vãi", "chán vl", "toang", "cay", "éo hiểu"...
+- Không dùng giọng MC event, motivational speaker, brand manager, content tuyển dụng, báo chí
+- Nếu đọc lên mà không tưởng tượng nổi một người thật sẽ nói câu đó, thì phải tự viết lại
+- Headline tối đa 80 ký tự; đừng cắt cụt câu chỉ để ngắn
+- Subtext chỉ dùng khi thật sự tăng lực cho punchline; không bắt buộc
+- Caption ngắn, 1-2 câu, giọng nói chuyện; có thể để null nếu headline đã đủ mạnh
+
+=== COMEDIC ANGLE ===
+Mỗi variation phải chọn 1 angle khác nhau. Không được chỉ thay vài từ rồi gọi là variation mới.
+Các angle nên rải ra giữa các kiểu sau:
+- relatable complaint: than thở đúng nỗi đau thường ngày
+- self-burn: tự dìm bản thân, tự nhận ngu
+- observational: chọc đúng một pattern ai cũng từng gặp
+- dialogue/thought bubble: câu thoại hoặc suy nghĩ nội tâm
+- absurd escalation: phóng đại vô lý nhưng vẫn đúng mood
+- deadpan: câu rất tỉnh nhưng buồn cười vì quá thật
 
 === QUY TẮC CHỌN NHÂN VẬT ===
-- Ưu tiên nhân vật có sẵn nếu phù hợp. Giải thích ngắn gọn lý do.
+- Ưu tiên nhân vật có sẵn nếu phù hợp. Giải thích ngắn gọn, thật cụ thể.
 - Nhân vật mention 1 lần được phép dùng dù không có trong thư viện
 - Nếu không nhân vật nào hợp thì để suggested_characters rỗng []
 - Gợi ý biểu cảm từ danh sách có sẵn (nếu dùng nhân vật thư viện)
 
 === VISUAL DIRECTION ===
 Tạo visual_direction chi tiết cho AI image gen:
-- scene: bối cảnh cụ thể (phòng ngủ lúc 2h sáng, văn phòng, quán cafe...)
-- character_styling: thần thái, outfit theo ngữ cảnh (mệt mỏi, hớn hở, hoảng loạn...)
-- composition: vị trí nhân vật, tương quan foreground/background
+- scene: bối cảnh cụ thể, có chi tiết đời thường
+- character_styling: thần thái, outfit, nét mặt đúng tình huống
+- composition: vị trí nhân vật, foreground/background rõ ràng
 - camera: góc máy, cỡ cảnh
 - lighting: ánh sáng
 - art_style: phong cách minh hoạ
+
+=== TỰ KIỂM TRA TRƯỚC KHI TRẢ KẾT QUẢ ===
+Tự chấm từng variation theo 4 tiêu chí sau, thang điểm 1-10:
+- naturalness: có giống người Việt thật nói không?
+- specificity: có đủ cụ thể để tưởng tượng ra tình huống không?
+- memeability: có punchline hoặc độ relatable không?
+- distinctness: có khác hẳn các variation còn lại không?
+Chỉ giữ variation đạt ít nhất 8/10 ở cả naturalness và memeability.
+Loại bỏ mọi câu có mùi PR, self-help, thơ ca, báo chí, hoặc "AI trying to be funny".
 
 Trả về JSON array, mỗi phần tử:
 {
@@ -166,7 +186,7 @@ CHỈ trả về JSON array, không có text khác.`;
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-3-flash-preview",
     contents: contents,
     config: {
       responseMimeType: "application/json",
