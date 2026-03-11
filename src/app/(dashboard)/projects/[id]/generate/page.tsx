@@ -425,6 +425,9 @@ export default function GeneratePage() {
 
     try {
       const taggedCharacters = characters.filter((c) => taggedCharacterIds.has(c.id));
+      const buildFullDescription = (desc?: string, personality?: string) =>
+        [desc, personality ? `Tính cách: ${personality}` : ""].filter(Boolean).join(". ");
+
       const sourceCharacterInputs = taggedCharacters.length > 0
         ? taggedCharacters.map((char) => {
             const suggested = v.suggested_characters.find((sc) => sc.character_id === char.id);
@@ -432,7 +435,7 @@ export default function GeneratePage() {
               id: char.id,
               name: char.name,
               emotion: suggested?.suggested_emotion || suggested?.emotion || "neutral",
-              description: char.description,
+              description: buildFullDescription(char.description, char.personality),
             };
           })
         : v.suggested_characters.map((sc) => {
@@ -441,7 +444,7 @@ export default function GeneratePage() {
               id: sc.character_id,
               name: sc.character_name,
               emotion: sc.suggested_emotion || sc.emotion,
-              description: char?.description,
+              description: buildFullDescription(char?.description, char?.personality),
             };
           });
 

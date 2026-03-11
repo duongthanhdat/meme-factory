@@ -70,7 +70,7 @@ export async function generateMemeImage(params: {
   const charDescriptions = characters
     .map(
       (c) =>
-        `- "${c.name}": biểu cảm ${c.emotion}${c.description ? `, ${c.description}` : ""}`
+        `- "${c.name}": biểu cảm ${c.emotion}${c.description ? `\n  Mô tả: ${c.description}` : ""}${c.poseImageBase64 ? "\n  (có ảnh reference đính kèm — BẮT BUỘC vẽ giống ảnh reference)" : ""}`
     )
     .join("\n");
 
@@ -107,7 +107,7 @@ YÊU CẦU BẮT BUỘC:
 5. Màu sắc tươi sáng, bão hoà, nhìn nổi bật trên news feed
 6. Phù hợp đăng lên Facebook, Instagram — thu hút engagement
 ${characters.some((c) => c.poseImageBase64)
-  ? "7. QUAN TRỌNG NHẤT: PHẢI giữ đúng nhận diện cốt lõi nhân vật từ ảnh tham chiếu (khuôn mặt, màu chủ đạo, đặc điểm nhận dạng chính). ĐƯỢC PHÉP thay đổi trang phục, pose, bối cảnh, góc máy theo nội dung meme nếu vẫn nhận ra đúng nhân vật."
+  ? "7. QUAN TRỌNG NHẤT — CHARACTER CONSISTENCY: Mỗi nhân vật có ảnh reference đính kèm bên dưới. Bạn PHẢI vẽ nhân vật GIỐNG CHÍNH XÁC ảnh reference: cùng loài (species), cùng khuôn mặt, cùng màu da/lông/tóc, cùng đặc điểm nhận dạng (sừng, đuôi, tai, mắt...), cùng art style. CHỈ thay đổi biểu cảm, tư thế, bối cảnh. Nếu reference là con bò cartoon thì output PHẢI là con bò cartoon đó — KHÔNG được vẽ nhân vật khác."
   : ""}
 ${referenceImages?.length
   ? `${characters.some((c) => c.poseImageBase64) ? "8" : "7"}. ẢNH THAM KHẢO NGỮ CẢNH: User đính kèm ${referenceImages.length} ảnh. Chỉ dùng để học bố cục/mood/context.`
@@ -136,9 +136,20 @@ ${referenceImages?.length
 
   // Add character reference images (up to 4 for character consistency)
   const charImages = characters.filter((c) => c.poseImageBase64);
+  if (charImages.length > 0) {
+    contents.push({
+      text: `=== ẢNH THAM CHIẾU NHÂN VẬT — BẮT BUỘC TUÂN THỦ ===
+Dưới đây là ảnh reference chính thức của từng nhân vật. Bạn PHẢI vẽ nhân vật GIỐNG CHÍNH XÁC ảnh reference:
+- GIỐNG CHÍNH XÁC: khuôn mặt, tỉ lệ cơ thể, màu da/lông/tóc, đặc điểm nhận dạng (sừng, đuôi, tai, mắt, mũi...)
+- GIỐNG CHÍNH XÁC: phong cách vẽ (nét vẽ, shading, art style) từ ảnh reference
+- ĐƯỢC PHÉP thay đổi: biểu cảm, tư thế, trang phục, bối cảnh theo nội dung meme
+- KHÔNG ĐƯỢC: tự sáng tạo nhân vật mới, thay đổi loài/species, thay đổi đặc điểm nhận dạng cốt lõi
+Nếu nhân vật trong ảnh reference là con bò thì PHẢI vẽ con bò, là con gấu thì PHẢI vẽ con gấu — KHÔNG ĐƯỢC đổi sang loài khác.`,
+    });
+  }
   for (const char of charImages.slice(0, 4)) {
     contents.push({
-      text: `Ảnh nhân vật tham chiếu: ${char.name}. Giữ nhận diện cốt lõi nhân vật này; cho phép biến đổi trang phục/bối cảnh/phụ kiện theo ngữ cảnh meme nếu hợp lý.`,
+      text: `[REFERENCE] Nhân vật "${char.name}" — Hãy vẽ nhân vật này GIỐNG CHÍNH XÁC ảnh bên dưới.${char.description ? ` Mô tả: ${char.description}` : ""}`,
     });
     contents.push({
       inlineData: {

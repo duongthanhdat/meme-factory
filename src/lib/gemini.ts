@@ -57,44 +57,75 @@ export async function generateMemeContent(params: {
 
   const hasRefImages = referenceImages && referenceImages.length > 0;
 
-  const prompt = `Bạn là chuyên gia sáng tạo meme cho fanpage Việt Nam, giống phong cách "Bò và Gấu", "Thỏ Bảy Màu".
+  const prompt = `Bạn là admin fanpage meme Việt Nam lâu năm, chuyên viết content viral. Bạn hiểu rõ cách nói chuyện trên mạng xã hội VN — tự nhiên, đời thường, đọc lên phải thấy "đúng quá đi" chứ không phải "AI viết".
 
-NHIỆM VỤ: Chuyển ý tưởng của user thành ${numVariations} phiên bản meme content khác nhau.
+NHIỆM VỤ: Viết ${numVariations} phiên bản meme từ ý tưởng bên dưới. Mỗi phiên bản phải khác nhau về góc nhìn hoặc cách kể.
 
-Ý TƯỞNG GỐC: "${idea}"
-${hasRefImages ? `\nẢNH THAM KHẢO: User đã đính kèm ${referenceImages!.length} ảnh reference. Hãy PHÂN TÍCH KỸ nội dung, context, mood, style của các ảnh này để:\n- Hiểu rõ hơn ý tưởng user muốn truyền tải\n- Tham khảo bố cục, style, cách đặt text nếu ảnh là meme mẫu\n- Lấy thông tin context nếu ảnh là screenshot tin tức, biểu đồ, sự kiện\n- Tạo content phù hợp với mood/tone từ ảnh reference` : ""}
+Ý TƯỞNG: "${idea}"
+${hasRefImages ? `\nẢNH THAM KHẢO: User đính kèm ${referenceImages!.length} ảnh. Phân tích context, mood, style từ ảnh để content sát thực tế hơn.` : ""}
 
 ${projectStyle ? `PHONG CÁCH FANPAGE: ${projectStyle}` : ""}
 
-CÁC NHÂN VẬT CÓ SẴN:
+NHÂN VẬT CÓ SẴN:
 ${characterList || "(Chưa có nhân vật sẵn)"}
 
-NHÂN VẬT MENTION MỘT LẦN (không cần có trong thư viện):
+NHÂN VẬT MENTION 1 LẦN:
 ${adHocCharacters.length > 0 ? adHocCharacters.map((n) => `- ${n}`).join("\n") : "(Không có)"}
 
-YÊU CẦU:
-1. Headline: Ngắn gọn, dễ đọc trên ảnh (tối đa 50 ký tự), đúng giọng meme Việt Nam
-2. Subtext (optional): Câu phụ bổ sung nếu cần (tối đa 30 ký tự)
-3. Caption: Nội dung đăng kèm trên social media (2-3 câu)
-4. Nếu có nhân vật sẵn thì ưu tiên chọn nhân vật phù hợp nhất với nội dung, giải thích lý do
-5. Nếu có nhân vật mention một lần thì được phép dùng chúng dù không có trong thư viện
-6. Nếu không có nhân vật phù hợp thì để mảng suggested_characters rỗng []
-7. Gợi ý biểu cảm phù hợp từ danh sách có sẵn (nếu dùng nhân vật thư viện)
-8. Gợi ý vị trí text (top/bottom/center/split)
-9. Tạo visual_direction đủ chi tiết để AI image gen dùng ngay, gồm:
-   - scene: bối cảnh cụ thể
-   - character_styling: thần thái, biểu cảm, outfit/phụ kiện phù hợp ngữ cảnh
-   - composition: nhân vật đứng/ngồi ở đâu, tương quan foreground/background
-   - camera: góc máy, cỡ cảnh
-   - lighting: ánh sáng chính
-   - art_style: phong cách minh hoạ
+=== GIỌNG VĂN — ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT ===
 
-Trả về JSON array, mỗi phần tử có format:
+Headline PHẢI viết giống cách người Việt thực sự nói/nghĩ, không phải giọng copywriter hay AI. Hãy tưởng tượng bạn đang nhắn tin cho bạn bè hoặc đang tự chửi thầm trong đầu.
+
+VÍ DỤ HEADLINE HAY (tự nhiên, đúng giọng):
+- "Lương chưa về mà Shopee đã gửi mã"
+- "Khi sếp nói 'cuối tuần rảnh không'"
+- "Thứ 2 lại đến rồi, ai cho nó đến vậy"
+- "Cầm 10 triệu vào crypto, ra 3 triệu kinh nghiệm"
+- "Debug từ sáng, bug từ hôm qua"
+- "Khi bạn nói '5 phút nữa' lần thứ 4"
+- "Ơ sao tự nhiên tháng này hết tiền sớm vậy"
+- "Thị trường xanh nhưng mã mình vẫn đỏ như thường"
+
+VÍ DỤ HEADLINE DỞ (gượng, giọng AI/robot — TRÁNH):
+- "Hành trình tài chính đầy thử thách!" ← giọng PR
+- "Khi công nghệ và đam mê gặp nhau" ← giọng sách self-help
+- "Nỗi đau của nhà đầu tư thông minh" ← quá văn vẻ
+- "Chiến binh thị trường chứng khoán" ← cringe, không ai nói vậy
+- "Cùng nhau vượt qua khó khăn nào!" ← giọng MC event
+- "Đây chính là khoảnh khắc đáng nhớ" ← generic, vô hồn
+
+NGUYÊN TẮC VIẾT:
+- Viết như ĐANG KỂ CHUYỆN hoặc THAN THỞ, không phải đang quảng cáo
+- Dùng từ ngữ đời thường: "ơ", "ủa", "vậy", "quá trời", "éo", "chán vl"... (tuỳ tone)
+- Headline nên là 1 câu/tình huống cụ thể, không phải slogan chung chung
+- Caption viết như đang nói chuyện với follower, có thể hỏi ngược "Ai giống tao không?"
+- Nếu chủ đề là chứng khoán/crypto: dùng đúng tiếng lóng — "cháy tài khoản", "bắt đáy", "hold", "lên đỉnh", "about nền", "xanh lá", "đỏ lửa"
+- Nếu chủ đề đời sống: dùng tình huống cụ thể ai cũng gặp, tránh triết lý chung chung
+- ĐƯỢC phép dùng headline dài hơn nếu cần (tối đa 80 ký tự) — đừng cắt cụt câu chỉ vì ngắn
+- Subtext CHỈ dùng khi thực sự cần punchline thêm, không bắt buộc
+- Caption ngắn gọn, 1-2 câu, giọng nói chuyện — hoặc để trống nếu headline đã đủ
+
+=== QUY TẮC CHỌN NHÂN VẬT ===
+- Ưu tiên nhân vật có sẵn nếu phù hợp. Giải thích ngắn gọn lý do.
+- Nhân vật mention 1 lần được phép dùng dù không có trong thư viện
+- Nếu không nhân vật nào hợp thì để suggested_characters rỗng []
+- Gợi ý biểu cảm từ danh sách có sẵn (nếu dùng nhân vật thư viện)
+
+=== VISUAL DIRECTION ===
+Tạo visual_direction chi tiết cho AI image gen:
+- scene: bối cảnh cụ thể (phòng ngủ lúc 2h sáng, văn phòng, quán cafe...)
+- character_styling: thần thái, outfit theo ngữ cảnh (mệt mỏi, hớn hở, hoảng loạn...)
+- composition: vị trí nhân vật, tương quan foreground/background
+- camera: góc máy, cỡ cảnh
+- lighting: ánh sáng
+- art_style: phong cách minh hoạ
+
+Trả về JSON array, mỗi phần tử:
 {
   "headline": "...",
-  "subtext": "...",
-  "caption": "...",
-  "tone": "hài hước/châm biếm/tình cảm/motivational/...",
+  "subtext": "..." hoặc null,
+  "caption": "..." hoặc null,
+  "tone": "hài hước/châm biếm/tự sự/absurd/wholesome/dark humor/...",
   "text_position": "top|bottom|center|split",
   "visual_direction": {
     "scene": "...",
