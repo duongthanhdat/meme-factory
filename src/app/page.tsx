@@ -3,6 +3,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   Sparkles, Zap, Users, Image as ImageIcon, ArrowRight, Palette, Download,
   Layers, Moon, Sun, ChevronDown, ChevronUp, MessageSquare,
@@ -282,8 +283,17 @@ function SparkleParticle({ delay, x, y, size = 8 }: { delay: number; x: string; 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<{ email?: string } | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Check auth state for navbar
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }: { data: { user: unknown } }) => {
+      setUser(data.user as { email?: string } | null);
+    });
+  }, []);
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: "var(--bg-primary)" }}>
@@ -304,12 +314,20 @@ export default function Home() {
             >
               {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
             </button>
-            <Link href="/login" className="px-5 py-2 text-sm font-semibold th-text-secondary th-bg-hover rounded-xl transition-colors">
-              Đăng nhập
-            </Link>
-            <Link href="/login" className="px-5 py-2 text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md shadow-violet-500/20">
-              Bắt đầu miễn phí
-            </Link>
+            {user ? (
+              <Link href="/projects" className="px-5 py-2 text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md shadow-violet-500/20">
+                Vào Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="px-5 py-2 text-sm font-semibold th-text-secondary th-bg-hover rounded-xl transition-colors">
+                  Đăng nhập
+                </Link>
+                <Link href="/login" className="px-5 py-2 text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md shadow-violet-500/20">
+                  Bắt đầu miễn phí
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
