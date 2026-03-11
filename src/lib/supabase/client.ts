@@ -18,6 +18,10 @@ export function createClient() {
     );
   }
 
-  client = createBrowserClient(url, key);
+  client = createBrowserClient(url, key, {
+    auth: {
+      flowType: "implicit",
+    },
+  });
   return client;
 }
