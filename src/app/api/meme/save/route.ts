@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       canvas_data,
       has_watermark,
       image_base64,
+      source_meme_id,
     } = body;
 
     // Verify ownership
@@ -32,6 +33,19 @@ export async function POST(request: NextRequest) {
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    if (source_meme_id) {
+      const { data: sourceMeme } = await supabase
+        .from("memes")
+        .select("id")
+        .eq("id", source_meme_id)
+        .eq("project_id", project_id)
+        .maybeSingle();
+
+      if (!sourceMeme) {
+        return NextResponse.json({ error: "Source meme không hợp lệ" }, { status: 400 });
+      }
     }
 
     let image_url = null;
@@ -60,21 +74,45 @@ export async function POST(request: NextRequest) {
     }
 
     // Save meme record
-    const { data: meme, error } = await supabase
+    const insertPayload = {
+      project_id,
+      original_idea,
+      generated_content,
+      selected_characters,
+      format,
+      canvas_data,
+      has_watermark: has_watermark || false,
+      image_url,
+      status: image_url ? "completed" : "draft",
+      source_meme_id: source_meme_id || null,
+    };
+
+    let { data: meme, error } = await supabase
       .from("memes")
-      .insert({
-        project_id,
-        original_idea,
-        generated_content,
-        selected_characters,
-        format,
-        canvas_data,
-        has_watermark: has_watermark || false,
-        image_url,
-        status: image_url ? "completed" : "draft",
-      })
+      .insert(insertPayload)
       .select()
       .single();
+
+    // Backward compatibility: if DB migration chưa chạy, thử lưu lại không có source_meme_id
+    if (error && String(error.message || "").includes("source_meme_id")) {
+      const fallback = await supabase
+        .from("memes")
+        .insert({
+          project_id,
+          original_idea,
+          generated_content,
+          selected_characters,
+          format,
+          canvas_data,
+          has_watermark: has_watermark || false,
+          image_url,
+          status: image_url ? "completed" : "draft",
+        })
+        .select()
+        .single();
+      meme = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

@@ -394,11 +394,13 @@ export function useMemes(projectRef: string) {
     format: MemeFormat;
     has_watermark: boolean;
     image_base64?: string | null;
+    source_meme_id?: string | null;
   }) => {
     if (IS_MOCK_MODE) {
       const newMeme: Meme = {
         id: uuidv4(),
         project_id: mockProjects.find((p) => p.id === projectRef || p.slug === projectRef)?.id || projectRef,
+        source_meme_id: input.source_meme_id || null,
         title: null,
         original_idea: input.original_idea,
         generated_content: input.generated_content,

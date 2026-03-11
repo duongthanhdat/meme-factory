@@ -96,6 +96,7 @@ export default function GeneratePage() {
 
   const fromMemeId = searchParams.get("fromMeme");
   const fromMode = searchParams.get("mode");
+  const lineageSourceMemeId = fromMode === "regenerate" ? fromMemeId : null;
   const [prefillAppliedKey, setPrefillAppliedKey] = useState<string | null>(null);
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -303,8 +304,12 @@ export default function GeneratePage() {
   }, [project?.name, watermarkText]);
 
   const mapMemeToVariation = useCallback((meme: { generated_content: MemeContent; selected_characters: SelectedCharacter[] }): ContentVariation => {
-    const content = meme.generated_content;
-    const selectedChars = meme.selected_characters || [];
+    const content = meme.generated_content || {
+      headline: "",
+      tone: "theo meme cũ",
+      layout_suggestion: { text_position: "top", character_positions: [] },
+    };
+    const selectedChars = Array.isArray(meme.selected_characters) ? meme.selected_characters : [];
 
     return {
       content,
@@ -349,7 +354,10 @@ export default function GeneratePage() {
       setVariations([variation]);
       setSelectedVariation(0);
       setHasPickedVariation(true);
-      setTaggedCharacterIds(new Set((sourceMeme.selected_characters || []).map((c) => c.character_id)));
+      const selectedChars = Array.isArray(sourceMeme.selected_characters)
+        ? sourceMeme.selected_characters
+        : [];
+      setTaggedCharacterIds(new Set(selectedChars.map((c) => c.character_id)));
       setAiCustomPrompt("");
       setAiImageBase64(null);
       setAiError(null);
@@ -598,6 +606,7 @@ export default function GeneratePage() {
             format,
             has_watermark: enableWatermark,
             image_base64: `data:image/png;base64,${result.image}`,
+            source_meme_id: lineageSourceMemeId,
           });
           toast.success("Đã tự động lưu vào bộ sưu tập");
         } catch (saveErr) {
@@ -641,6 +650,7 @@ export default function GeneratePage() {
         format,
         has_watermark: enableWatermark,
         image_base64: imageData,
+        source_meme_id: lineageSourceMemeId,
       });
       toast.success("Đã lưu meme vào thư viện!");
     } catch (err) {

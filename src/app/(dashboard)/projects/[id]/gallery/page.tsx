@@ -78,7 +78,11 @@ export default function GalleryPage() {
     await remove(deleteTarget);
     toast.success("Đã xoá meme");
     if (selectedMeme === deleteTarget) setSelectedMeme(null);
-    selectedIds.delete(deleteTarget);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(deleteTarget);
+      return next;
+    });
     setDeleteTarget(null);
   };
 
@@ -103,11 +107,23 @@ export default function GalleryPage() {
   };
 
   const goRegenerate = (memeId: string) => {
-    router.push(`/projects/${projectId}/generate?fromMeme=${encodeURIComponent(memeId)}&mode=regenerate`);
+    setSelectedMeme(null);
+    setDeleteTarget(null);
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    requestAnimationFrame(() => {
+      router.push(`/projects/${projectId}/generate?fromMeme=${encodeURIComponent(memeId)}&mode=regenerate`);
+    });
   };
 
   const goReuseIdea = (memeId: string) => {
-    router.push(`/projects/${projectId}/generate?fromMeme=${encodeURIComponent(memeId)}&mode=reuse`);
+    setSelectedMeme(null);
+    setDeleteTarget(null);
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    requestAnimationFrame(() => {
+      router.push(`/projects/${projectId}/generate?fromMeme=${encodeURIComponent(memeId)}&mode=reuse`);
+    });
   };
 
   const handleBulkDownload = useCallback(async () => {
@@ -406,6 +422,11 @@ export default function GalleryPage() {
                       <span className="px-1.5 py-0.5 text-xs th-bg-tertiary th-text-tertiary rounded">
                         {meme.format}
                       </span>
+                      {meme.source_meme_id && (
+                        <span className="px-1.5 py-0.5 text-xs rounded th-bg-accent-light th-text-accent">
+                          Biến thể
+                        </span>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -461,6 +482,9 @@ export default function GalleryPage() {
                       <Calendar size={12} />
                       {new Date(selected.created_at).toLocaleString("vi-VN")}
                       <span className="px-1.5 py-0.5 th-bg-tertiary rounded">{selected.format}</span>
+                      {selected.source_meme_id && (
+                        <span className="px-1.5 py-0.5 rounded th-bg-accent-light th-text-accent">Biến thể từ meme cũ</span>
+                      )}
                     </div>
                     <div className="flex gap-2 pt-2">
                       <Button variant="outline" size="sm" onClick={() => goRegenerate(selected.id)}>

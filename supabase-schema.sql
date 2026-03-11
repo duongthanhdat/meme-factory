@@ -60,6 +60,7 @@ create table public.character_poses (
 create table public.memes (
   id uuid default gen_random_uuid() primary key,
   project_id uuid references public.projects(id) on delete cascade not null,
+  source_meme_id uuid references public.memes(id) on delete set null,
   title text,
   original_idea text not null,
   generated_content jsonb not null default '{}',
@@ -164,6 +165,7 @@ create index idx_projects_user_id on public.projects(user_id);
 create index idx_characters_project_id on public.characters(project_id);
 create index idx_character_poses_character_id on public.character_poses(character_id);
 create index idx_memes_project_id on public.memes(project_id);
+create index idx_memes_source_meme_id on public.memes(source_meme_id);
 create index idx_memes_created_at on public.memes(created_at desc);
 
 -- ============================================

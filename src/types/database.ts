@@ -42,6 +42,7 @@ export interface CharacterPose {
 export interface Meme {
   id: string;
   project_id: string;
+  source_meme_id?: string | null;
   title: string | null;
   original_idea: string; // user's raw input
   generated_content: MemeContent; // AI-generated content
