@@ -8,13 +8,21 @@ import Sidebar from "@/components/layout/sidebar";
 import Card, { CardContent } from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import { Users, Image, Zap, TrendingUp, Plus, ArrowRight, UserPlus, Trash2 } from "lucide-react";
-import { POINT_PACKAGES, formatVND } from "@/lib/point-pricing";
+import { useWallet } from "@/contexts/WalletContext";
 
 interface ProjectMember {
   user_id: string;
   email: string;
   role: string;
   is_owner: boolean;
+}
+
+interface ProjectInvitation {
+  id: string;
+  invitee_user_id: string;
+  invitee_email: string;
+  status: "pending" | "accepted" | "rejected" | "cancelled";
+  created_at: string;
 }
 
 interface ProjectWalletTransaction {
@@ -33,13 +41,16 @@ export default function ProjectOverviewPage() {
   const { project, loading: projLoading } = useProject(projectId);
   const { characters, loading: charsLoading } = useCharacters(projectId);
   const { memes, loading: memesLoading } = useMemes(projectId);
+  const { points: personalPoints, refreshBalance } = useWallet();
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [memberEmail, setMemberEmail] = useState("");
   const [memberBusy, setMemberBusy] = useState(false);
+  const [invitations, setInvitations] = useState<ProjectInvitation[]>([]);
   const [projectPoints, setProjectPoints] = useState(0);
   const [projectTx, setProjectTx] = useState<ProjectWalletTransaction[]>([]);
   const [walletBusy, setWalletBusy] = useState(false);
+  const [depositPoints, setDepositPoints] = useState("50");
 
   const loading = projLoading || charsLoading || memesLoading;
 
@@ -50,6 +61,7 @@ export default function ProjectOverviewPage() {
       if (!res.ok) return;
       setMembers(data.members || []);
       setIsOwner(Boolean(data.isOwner));
+      setInvitations(data.invitations || []);
     } catch {
       // ignore
     }
@@ -95,6 +107,25 @@ export default function ProjectOverviewPage() {
     }
   };
 
+  const cancelInvitation = async (invitationId: string) => {
+    const ok = window.confirm("Huỷ lời mời này?");
+    if (!ok) return;
+    setMemberBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members?invitationId=${encodeURIComponent(invitationId)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data?.error || "Không thể huỷ lời mời");
+      } else {
+        fetchMembers();
+      }
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
   const removeMember = async (userId: string) => {
     const ok = window.confirm("Xoá thành viên này khỏi dự án?");
     if (!ok) return;
@@ -114,19 +145,21 @@ export default function ProjectOverviewPage() {
     }
   };
 
-  const topupProjectWallet = async (packageId: string) => {
+  const topupProjectWallet = async (points: number) => {
+    if (!Number.isFinite(points) || points <= 0) return;
     setWalletBusy(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/wallet`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ points }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         alert(data?.error || "Không thể nạp ví dự án");
       } else {
         fetchProjectWallet();
+        refreshBalance();
       }
     } finally {
       setWalletBusy(false);
@@ -204,24 +237,38 @@ export default function ProjectOverviewPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold th-text-primary">Ví dự án</h2>
-                <span className="text-sm th-text-muted">{projectPoints.toLocaleString("vi-VN")} pts</span>
+                <span className="text-sm th-text-muted">{projectPoints.toLocaleString("vi-VN")} pts (cá nhân: {personalPoints.toLocaleString("vi-VN")} pts)</span>
               </div>
 
               {isOwner && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {POINT_PACKAGES.slice(0, 4).map((pkg) => (
-                    <button
-                      key={pkg.id}
-                      onClick={() => topupProjectWallet(pkg.id)}
-                      disabled={walletBusy}
-                      className="p-3 rounded-xl border text-left th-bg-hover disabled:opacity-60"
-                      style={{ borderColor: "var(--border-primary)" }}
+                <div className="space-y-2">
+                  <div className="flex gap-2 flex-wrap">
+                    {[10, 50, 120, 300].map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => setDepositPoints(String(v))}
+                        className="px-3 py-1.5 rounded-lg text-xs th-bg-tertiary th-text-secondary"
+                      >
+                        {v} pts
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={depositPoints}
+                      onChange={(e) => setDepositPoints(e.target.value)}
+                      className="px-3 py-2 rounded-xl text-sm th-bg-card th-text-primary"
+                      style={{ border: "1px solid var(--border-primary)" }}
+                    />
+                    <Button
+                      onClick={() => topupProjectWallet(Number(depositPoints))}
+                      disabled={walletBusy || !depositPoints || Number(depositPoints) <= 0}
                     >
-                      <p className="text-xs font-semibold th-text-primary">{pkg.name}</p>
-                      <p className="text-xs th-text-muted">+{pkg.points} pts</p>
-                      <p className="text-xs th-text-secondary mt-1">{formatVND(pkg.price)}</p>
-                    </button>
-                  ))}
+                      Deposit points
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -295,7 +342,7 @@ export default function ProjectOverviewPage() {
                     style={{ border: "1px solid var(--border-primary)" }}
                   />
                   <Button onClick={addMember} disabled={!memberEmail.trim() || memberBusy}>
-                    <UserPlus size={14} /> Thêm thành viên
+                    <UserPlus size={14} /> Gửi lời mời
                   </Button>
                 </div>
               )}
@@ -324,6 +371,36 @@ export default function ProjectOverviewPage() {
                   </div>
                 ))}
               </div>
+
+              {isOwner && invitations.filter((i) => i.status === "pending").length > 0 && (
+                <div className="pt-2">
+                  <p className="text-xs th-text-muted mb-2">Lời mời đang chờ phản hồi</p>
+                  <div className="space-y-2">
+                    {invitations
+                      .filter((i) => i.status === "pending")
+                      .map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="flex items-center justify-between rounded-xl px-3 py-2"
+                          style={{ background: "var(--bg-tertiary)" }}
+                        >
+                          <div>
+                            <p className="text-sm th-text-primary">{inv.invitee_email}</p>
+                            <p className="text-xs th-text-muted">Đã mời lúc {new Date(inv.created_at).toLocaleString("vi-VN")}</p>
+                          </div>
+                          <button
+                            onClick={() => cancelInvitation(inv.id)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs"
+                            style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}
+                            disabled={memberBusy}
+                          >
+                            <Trash2 size={12} /> Huỷ mời
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

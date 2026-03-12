@@ -7,7 +7,7 @@ import Button from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ChevronLeft, ChevronRight, Check, XCircle } from "lucide-react";
 
-type Tab = "transactions" | "topups";
+type Tab = "transactions" | "projectPoints" | "topups";
 
 interface Transaction {
   id: string;
@@ -18,6 +18,13 @@ interface Transaction {
   description: string;
   status: string;
   created_at: string;
+  project_name?: string;
+}
+
+interface UsageSummary {
+  email: string;
+  total_points: number;
+  tx_count: number;
 }
 
 interface TopupOrder {
@@ -43,6 +50,7 @@ export default function AdminTransactionsPage() {
 
   // Transactions state
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [usageSummary, setUsageSummary] = useState<UsageSummary[]>([]);
   const [txLoading, setTxLoading] = useState(true);
   const [txPage, setTxPage] = useState(1);
   const [txTotalPages, setTxTotalPages] = useState(1);
@@ -67,16 +75,18 @@ export default function AdminTransactionsPage() {
     try {
       const token = await getToken();
       const params = new URLSearchParams({ page: String(txPage) });
+      if (tab === "projectPoints") params.set("scope", "project");
       if (txFilter) params.set("type", txFilter);
       const res = await fetch(`/api/admin/transactions?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       setTransactions(data.transactions ?? []);
+      setUsageSummary(data.usageSummary ?? []);
       setTxTotalPages(data.totalPages ?? 1);
     } catch { /* ignore */ }
     setTxLoading(false);
-  }, [txPage, txFilter]);
+  }, [txPage, txFilter, tab]);
 
   const fetchOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -95,7 +105,7 @@ export default function AdminTransactionsPage() {
   }, [ordersPage, ordersFilter]);
 
   useEffect(() => {
-    if (tab === "transactions") fetchTransactions();
+    if (tab === "transactions" || tab === "projectPoints") fetchTransactions();
   }, [tab, fetchTransactions]);
 
   useEffect(() => {
@@ -156,6 +166,14 @@ export default function AdminTransactionsPage() {
             Giao dịch
           </button>
           <button
+            onClick={() => setTab("projectPoints")}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
+              tab === "projectPoints" ? "th-border-accent th-bg-accent-light th-text-accent" : "th-bg-tertiary th-text-secondary border-transparent"
+            }`}
+          >
+            Đốt points theo member
+          </button>
+          <button
             onClick={() => setTab("topups")}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
               tab === "topups" ? "th-border-accent th-bg-accent-light th-text-accent" : "th-bg-tertiary th-text-secondary border-transparent"
@@ -166,7 +184,7 @@ export default function AdminTransactionsPage() {
         </div>
 
         {/* Transactions Tab */}
-        {tab === "transactions" && (
+        {(tab === "transactions" || tab === "projectPoints") && (
           <>
             <div className="flex gap-2 mb-4 flex-wrap">
               {[
@@ -187,6 +205,21 @@ export default function AdminTransactionsPage() {
               ))}
             </div>
 
+            {tab === "projectPoints" && usageSummary.length > 0 && (
+              <div className="rounded-2xl border p-4 mb-4" style={{ background: "var(--bg-card)", borderColor: "var(--border-primary)" }}>
+                <h3 className="text-sm font-semibold th-text-primary mb-3">Top member đốt points</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {usageSummary.slice(0, 6).map((u) => (
+                    <div key={u.email} className="rounded-lg px-3 py-2" style={{ background: "var(--bg-tertiary)" }}>
+                      <p className="text-xs th-text-secondary truncate">{u.email}</p>
+                      <p className="text-sm font-semibold th-text-primary">{u.total_points} pts</p>
+                      <p className="text-xs th-text-muted">{u.tx_count} lượt</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--bg-card)", borderColor: "var(--border-primary)" }}>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -194,24 +227,26 @@ export default function AdminTransactionsPage() {
                     <tr style={{ background: "var(--bg-tertiary)" }}>
                       <th className="text-left py-2.5 px-4 text-xs font-medium th-text-muted uppercase">Thời gian</th>
                       <th className="text-left py-2.5 px-4 text-xs font-medium th-text-muted uppercase">Email</th>
+                      {tab === "projectPoints" && <th className="text-left py-2.5 px-4 text-xs font-medium th-text-muted uppercase">Dự án</th>}
                       <th className="text-left py-2.5 px-4 text-xs font-medium th-text-muted uppercase">Loại</th>
                       <th className="text-left py-2.5 px-4 text-xs font-medium th-text-muted uppercase">Mô tả</th>
                       <th className="text-left py-2.5 px-4 text-xs font-medium th-text-muted uppercase">Trạng thái</th>
-                      <th className="text-right py-2.5 px-4 text-xs font-medium th-text-muted uppercase">Số tiền</th>
+                      <th className="text-right py-2.5 px-4 text-xs font-medium th-text-muted uppercase">{tab === "projectPoints" ? "Points" : "Số tiền"}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {txLoading ? (
                       Array.from({ length: 5 }).map((_, i) => (
-                        <tr key={i}><td colSpan={6} className="py-4 px-4"><div className="h-5 th-bg-tertiary rounded animate-pulse" /></td></tr>
+                        <tr key={i}><td colSpan={tab === "projectPoints" ? 7 : 6} className="py-4 px-4"><div className="h-5 th-bg-tertiary rounded animate-pulse" /></td></tr>
                       ))
                     ) : transactions.length === 0 ? (
-                      <tr><td colSpan={6} className="py-12 text-center th-text-muted">Không có giao dịch</td></tr>
+                      <tr><td colSpan={tab === "projectPoints" ? 7 : 6} className="py-12 text-center th-text-muted">Không có giao dịch</td></tr>
                     ) : (
                       transactions.map((tx) => (
                         <tr key={tx.id} className="border-t" style={{ borderColor: "var(--border-primary)" }}>
                           <td className="py-2.5 px-4 th-text-muted text-xs whitespace-nowrap">{formatDate(tx.created_at)}</td>
                           <td className="py-2.5 px-4 th-text-primary text-xs truncate max-w-[160px]">{tx.user_email}</td>
+                          {tab === "projectPoints" && <td className="py-2.5 px-4 th-text-secondary text-xs">{tx.project_name || "—"}</td>}
                           <td className="py-2.5 px-4">
                             <span className="px-2 py-0.5 rounded-md text-xs font-medium" style={{
                               background: tx.type === "topup" ? "rgba(34,197,94,0.15)" : tx.type === "refund" ? "rgba(59,130,246,0.15)" : "rgba(239,68,68,0.15)",
@@ -225,7 +260,8 @@ export default function AdminTransactionsPage() {
                             {tx.status === "completed" ? "Hoàn thành" : tx.status === "failed" ? "Thất bại" : "Đang xử lý"}
                           </td>
                           <td className="py-2.5 px-4 text-right font-medium" style={{ color: Number(tx.amount) >= 0 ? "#22c55e" : "#ef4444" }}>
-                            {Number(tx.amount) >= 0 ? "+" : ""}{formatVND(Number(tx.amount))}
+                            {Number(tx.amount) >= 0 ? "+" : ""}
+                            {tab === "projectPoints" ? `${Number(tx.amount)} pts` : formatVND(Number(tx.amount))}
                           </td>
                         </tr>
                       ))

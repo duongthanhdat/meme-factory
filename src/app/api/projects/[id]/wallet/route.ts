@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
-import { POINT_PACKAGES } from "@/lib/point-pricing";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -73,18 +72,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const body = await req.json();
-  const packageId = String(body?.packageId || "");
-  const pkg = POINT_PACKAGES.find((p) => p.id === packageId);
-  if (!pkg) {
-    return NextResponse.json({ error: "Gói không hợp lệ" }, { status: 400 });
+  const points = Number(body?.points || 0);
+  if (!Number.isFinite(points) || points <= 0) {
+    return NextResponse.json({ error: "Số points không hợp lệ" }, { status: 400 });
   }
 
-  const { data: result, error } = await supabaseAdmin.rpc("atomic_buy_project_points", {
+  const { data: result, error } = await supabaseAdmin.rpc("atomic_deposit_points_to_project", {
     _project_id: project.id,
     _owner_user_id: user.id,
-    _price: pkg.price,
-    _points_to_add: pkg.points,
-    _description: `Nạp ví dự án ${project.name}: gói ${pkg.name} (+${pkg.points} points)`,
+    _points_to_deposit: points,
+    _description: `Nạp ví dự án ${project.name}: +${points} points`,
   });
 
   if (error) {
@@ -92,11 +89,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   if (!result?.success) {
-    if (result?.error === "Insufficient balance") {
+    if (result?.error === "Insufficient points") {
       return NextResponse.json(
         {
-          error: `Số dư cá nhân không đủ. Cần ${pkg.price.toLocaleString("vi-VN")}đ, hiện có ${Number(result?.balance ?? 0).toLocaleString("vi-VN")}đ`,
-          code: "INSUFFICIENT_BALANCE",
+          error: `Points cá nhân không đủ. Cần ${points} points, hiện có ${Number(result?.points ?? 0)} points`,
+          code: "INSUFFICIENT_POINTS",
         },
         { status: 400 }
       );
@@ -108,7 +105,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({
     success: true,
     project_points: result.project_points,
-    balance: result.balance,
-    package: { id: pkg.id, name: pkg.name, points: pkg.points, price: pkg.price },
+    user_points: result.user_points,
+    deposited: points,
   });
 }
