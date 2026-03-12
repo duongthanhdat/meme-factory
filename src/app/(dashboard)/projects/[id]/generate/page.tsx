@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProject, useCharacters, useMemes, generateContent, generateImage } from "@/lib/use-store";
 import Sidebar from "@/components/layout/sidebar";
 import Button from "@/components/ui/button";
@@ -43,6 +43,7 @@ interface ContentVariation {
 
 export default function GeneratePage() {
   const params = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = params.id as string;
 
@@ -660,27 +661,23 @@ export default function GeneratePage() {
   };
 
   const handleReset = () => {
+    // Soft reset: quay về bước ý tưởng nhưng giữ lại idea/ref để sửa nhanh
+    if (fromMemeId || fromMode) {
+      router.replace(`/projects/${projectId}/generate`);
+    }
+
     setStep(1);
-    setIdea("");
     setVariations([]);
     setSelectedVariation(0);
     setHasPickedVariation(false);
     setAiImageBase64(null);
     setAiError(null);
-    setAiCustomPrompt("");
+    setAiGenerating(false);
+    setGenerating(false);
+    setSaving(false);
+    setPrefillAppliedKey(null);
     setTaggedCharacterIds(new Set());
     setSelectedCharacterIds(new Set());
-    setOneOffCharacters([]);
-    setOneOffInput("");
-    setEnableWatermark(true);
-    setWatermarkText(project?.name || "");
-    if (watermarkLogo) URL.revokeObjectURL(watermarkLogo.preview);
-    setWatermarkLogo(null);
-    // Clean up reference image object URLs
-    refImages.forEach((img) => URL.revokeObjectURL(img.preview));
-    aiRefImages.forEach((img) => URL.revokeObjectURL(img.preview));
-    setRefImages([]);
-    setAiRefImages([]);
   };
 
   if (loading) {
