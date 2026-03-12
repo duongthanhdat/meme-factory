@@ -23,12 +23,11 @@ export async function POST(request: NextRequest) {
       source_meme_id,
     } = body;
 
-    // Verify ownership
+    // Verify access (owner or shared member via RLS)
     const { data: project } = await supabase
       .from("projects")
       .select("id")
       .eq("id", project_id)
-      .eq("user_id", user.id)
       .single();
 
     if (!project) {

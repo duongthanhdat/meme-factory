@@ -15,12 +15,11 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as GenerateContentRequest;
     const { project_id, idea, tone, num_variations, referenceImages, adHocCharacters } = body;
 
-    // Verify project ownership
+    // Verify project access (owner or shared member via RLS)
     const { data: project } = await supabase
       .from("projects")
       .select("*")
       .eq("id", project_id)
-      .eq("user_id", user.id)
       .single();
 
     if (!project) {

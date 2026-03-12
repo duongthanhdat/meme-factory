@@ -1,12 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useProject, useCharacters, useMemes } from "@/lib/use-store";
 import Sidebar from "@/components/layout/sidebar";
 import Card, { CardContent } from "@/components/ui/card";
 import Button from "@/components/ui/button";
-import { Users, Image, Zap, TrendingUp, Plus, ArrowRight } from "lucide-react";
+import { Users, Image, Zap, TrendingUp, Plus, ArrowRight, UserPlus, Trash2 } from "lucide-react";
+
+interface ProjectMember {
+  user_id: string;
+  email: string;
+  role: string;
+  is_owner: boolean;
+}
 
 export default function ProjectOverviewPage() {
   const params = useParams();
@@ -16,8 +24,70 @@ export default function ProjectOverviewPage() {
   const { project, loading: projLoading } = useProject(projectId);
   const { characters, loading: charsLoading } = useCharacters(projectId);
   const { memes, loading: memesLoading } = useMemes(projectId);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberBusy, setMemberBusy] = useState(false);
 
   const loading = projLoading || charsLoading || memesLoading;
+
+  const fetchMembers = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members`);
+      const data = await res.json();
+      if (!res.ok) return;
+      setMembers(data.members || []);
+      setIsOwner(Boolean(data.isOwner));
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (!projectId) return;
+    fetchMembers();
+  }, [projectId]);
+
+  const addMember = async () => {
+    const email = memberEmail.trim();
+    if (!email) return;
+    setMemberBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data?.error || "Không thể thêm thành viên");
+      } else {
+        setMemberEmail("");
+        fetchMembers();
+      }
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
+  const removeMember = async (userId: string) => {
+    const ok = window.confirm("Xoá thành viên này khỏi dự án?");
+    if (!ok) return;
+    setMemberBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members?userId=${encodeURIComponent(userId)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data?.error || "Không thể xoá thành viên");
+      } else {
+        fetchMembers();
+      }
+    } finally {
+      setMemberBusy(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -114,6 +184,58 @@ export default function ProjectOverviewPage() {
                 </div>
               </div>
               <ArrowRight size={18} className="th-text-muted" />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mb-8">
+          <Card>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold th-text-primary">Thành viên dự án</h2>
+                <span className="text-xs th-text-muted">{members.length} người</span>
+              </div>
+
+              {isOwner && (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    placeholder="Nhập email để thêm vào dự án"
+                    value={memberEmail}
+                    onChange={(e) => setMemberEmail(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-xl text-sm th-bg-card th-text-primary"
+                    style={{ border: "1px solid var(--border-primary)" }}
+                  />
+                  <Button onClick={addMember} disabled={!memberEmail.trim() || memberBusy}>
+                    <UserPlus size={14} /> Thêm thành viên
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {members.map((m) => (
+                  <div
+                    key={m.user_id}
+                    className="flex items-center justify-between rounded-xl px-3 py-2"
+                    style={{ background: "var(--bg-tertiary)" }}
+                  >
+                    <div>
+                      <p className="text-sm th-text-primary">{m.email}</p>
+                      <p className="text-xs th-text-muted">{m.is_owner ? "Owner" : "Member"}</p>
+                    </div>
+                    {isOwner && !m.is_owner && (
+                      <button
+                        onClick={() => removeMember(m.user_id)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs"
+                        style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}
+                        disabled={memberBusy}
+                      >
+                        <Trash2 size={12} /> Xoá
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
