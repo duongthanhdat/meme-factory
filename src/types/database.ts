@@ -164,6 +164,7 @@ export interface GenerateMemeImageRequest {
 export type ImageGenType = "meme" | "character" | "background";
 
 export interface ImageGenMemeParams {
+  project_id?: string;
   type: "meme";
   headline: string;
   subtext?: string;
@@ -190,6 +191,7 @@ export interface ImageGenMemeParams {
 }
 
 export interface ImageGenCharacterParams {
+  project_id?: string;
   type: "character";
   characterName: string;
   characterDescription: string;
@@ -199,6 +201,7 @@ export interface ImageGenCharacterParams {
 }
 
 export interface ImageGenBackgroundParams {
+  project_id?: string;
   type: "background";
   description: string;
   mood?: string;
@@ -215,6 +218,22 @@ export interface ImageGenResponse {
   text?: string; // optional text response from model
   error?: string;
   code?: string;
+}
+
+export interface ProjectWallet {
+  project_id: string;
+  points: number;
+}
+
+export interface ProjectTransaction {
+  id: string;
+  project_id: string;
+  actor_user_id: string | null;
+  amount: number;
+  type: "topup" | "payment" | "refund";
+  description: string | null;
+  status: "completed" | "pending" | "failed";
+  created_at: string;
 }
 
 // ============================================

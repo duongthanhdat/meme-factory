@@ -14,7 +14,7 @@ import { Zap, Sparkles, Download, Save, RotateCcw, ChevronRight, Check, Wand2, I
 import type { MemeContent, MemeFormat, SelectedCharacter, EmotionTag } from "@/types/database";
 import { FORMAT_DIMENSIONS } from "@/types/database";
 import { useWallet } from "@/contexts/WalletContext";
-import { POINT_COSTS, hasEnoughPoints } from "@/lib/point-pricing";
+import { POINT_COSTS } from "@/lib/point-pricing";
 
 interface ContentVariation {
   content: MemeContent;
@@ -492,13 +492,6 @@ export default function GeneratePage() {
     const v = variations[selectedVariation];
     if (!v) return;
 
-    // Refresh balance then check points
-    await refreshBalance();
-    if (!hasEnoughPoints(points, "meme")) {
-      toast.error(`Không đủ points. Tạo meme cần ${POINT_COSTS.meme} points, bạn có ${points} points. Vui lòng mua thêm trong Ví tiền.`);
-      return;
-    }
-
     setAiGenerating(true);
     setAiError(null);
     setAiImageBase64(null);
@@ -574,6 +567,7 @@ export default function GeneratePage() {
       }
 
       const result = await generateImage({
+        project_id: project?.id || projectId,
         type: "meme",
         headline: v.headline,
         subtext: v.subtext,

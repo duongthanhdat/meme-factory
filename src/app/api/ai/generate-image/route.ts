@@ -25,7 +25,8 @@ function getPointAction(type: string): PointAction {
 }
 
 export async function POST(request: NextRequest) {
-  let userId: string | null = null;
+  let actorUserId: string | null = null;
+  let projectId: string | null = null;
   let deductedCost = 0;
   let deductedAction: PointAction | null = null;
 
@@ -39,10 +40,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    userId = user.id;
+    actorUserId = user.id;
 
     const body = await request.json();
-    const { type } = body;
+    const { type, project_id } = body;
 
     if (!type || !["meme", "character", "background"].includes(type)) {
       return NextResponse.json(
@@ -51,6 +52,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!project_id || typeof project_id !== "string") {
+      return NextResponse.json({ error: "Thiếu project_id" }, { status: 400 });
+    }
+
+    // Verify user can access this project (owner or shared member via RLS)
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("id", project_id)
+      .maybeSingle();
+
+    if (!project) {
+      return NextResponse.json({ error: "Project không hợp lệ hoặc bạn không có quyền" }, { status: 403 });
+    }
+
+    projectId = project_id;
+
     // ============================================
     // Point System — Atomic Deduct via RPC
     // ============================================
@@ -58,10 +76,11 @@ export async function POST(request: NextRequest) {
     const cost = POINT_COSTS[action];
 
     if (cost > 0) {
-      const { data: deductResult, error: deductRpcErr } = await supabaseAdmin.rpc("atomic_deduct_points", {
-        _user_id: user.id,
+      const { data: deductResult, error: deductRpcErr } = await supabaseAdmin.rpc("atomic_deduct_project_points", {
+        _project_id: projectId,
+        _actor_user_id: user.id,
         _cost: cost,
-        _description: `${POINT_LABELS[action]} (-${cost} points)`,
+        _description: `${POINT_LABELS[action]} (-${cost} points) từ ví dự án`,
       });
 
       if (deductRpcErr) {
@@ -72,7 +91,7 @@ export async function POST(request: NextRequest) {
         const currentPoints = deductResult?.points ?? 0;
         return NextResponse.json(
           {
-            error: `Không đủ points. ${POINT_LABELS[action]} cần ${cost} points, bạn có ${currentPoints} points.`,
+            error: `Ví dự án không đủ points. ${POINT_LABELS[action]} cần ${cost} points, hiện có ${currentPoints} points.`,
             code: "INSUFFICIENT_POINTS",
             required: cost,
             current: currentPoints,
@@ -148,11 +167,12 @@ export async function POST(request: NextRequest) {
       error instanceof Error ? error.message : "";
 
     // Guarantee: if points were deducted and request fails, refund immediately
-    if (userId && deductedCost > 0 && deductedAction) {
-      const { error: refundError } = await supabaseAdmin.rpc("atomic_refund_points", {
-        _user_id: userId,
+    if (actorUserId && projectId && deductedCost > 0 && deductedAction) {
+      const { error: refundError } = await supabaseAdmin.rpc("atomic_refund_project_points", {
+        _project_id: projectId,
+        _actor_user_id: actorUserId,
         _cost: deductedCost,
-        _description: `Hoàn ${deductedCost} pts — lỗi tạo ${POINT_LABELS[deductedAction]}`,
+        _description: `Hoàn ${deductedCost} pts vào ví dự án — lỗi tạo ${POINT_LABELS[deductedAction]}`,
       });
       if (refundError) {
         console.error("Point refund failed:", refundError.message);

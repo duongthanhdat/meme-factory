@@ -31,7 +31,6 @@ import { BulkUploader } from "@/components/ui/bulk-uploader";
 import type { Character, EmotionTag } from "@/types/database";
 import { PROMPT_TEMPLATES, type PromptTemplate } from "@/lib/prompt-templates";
 import { useWallet } from "@/contexts/WalletContext";
-import { POINT_COSTS, hasEnoughPoints } from "@/lib/point-pricing";
 
 const EMOTION_OPTIONS: { value: EmotionTag; label: string; emoji: string }[] = [
   { value: "happy", label: "Vui", emoji: "😊" },
@@ -57,7 +56,7 @@ export default function CharactersPage() {
   const toast = useToast();
   const { project } = useProject(projectId);
   const { characters, loading, createCharacter, updateCharacter, deleteCharacter, addPose, deletePose } = useCharacters(projectId);
-  const { points, refreshBalance } = useWallet();
+  const { refreshBalance } = useWallet();
 
   const [expandedChar, setExpandedChar] = useState<string | null>(null);
   const [deleteCharTarget, setDeleteCharTarget] = useState<string | null>(null);
@@ -198,13 +197,6 @@ export default function CharactersPage() {
     const char = characters.find((c) => c.id === aiPoseCharId);
     if (!char) return;
 
-    // Refresh balance then check points
-    await refreshBalance();
-    if (!hasEnoughPoints(points, "character")) {
-      toast.error(`Không đủ points. Tạo ảnh nhân vật cần ${POINT_COSTS.character} points, bạn có ${points} points. Vui lòng mua thêm trong Ví tiền.`);
-      return;
-    }
-
     setAiPoseGenerating(true);
     setAiPoseError(null);
     setAiPoseImage(null);
@@ -220,6 +212,7 @@ export default function CharactersPage() {
       const styleToUse = aiPoseStyle.trim() || selectedTemplate?.characterStyle || undefined;
 
       const result = await generateImage({
+        project_id: project?.id || projectId,
         type: "character",
         characterName: char.name,
         characterDescription: fullDescription || `Nhân vật ${char.name} cho fanpage meme Việt Nam`,

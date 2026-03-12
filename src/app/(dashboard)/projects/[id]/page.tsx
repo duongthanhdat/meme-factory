@@ -8,12 +8,21 @@ import Sidebar from "@/components/layout/sidebar";
 import Card, { CardContent } from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import { Users, Image, Zap, TrendingUp, Plus, ArrowRight, UserPlus, Trash2 } from "lucide-react";
+import { POINT_PACKAGES, formatVND } from "@/lib/point-pricing";
 
 interface ProjectMember {
   user_id: string;
   email: string;
   role: string;
   is_owner: boolean;
+}
+
+interface ProjectWalletTransaction {
+  id: string;
+  amount: number;
+  type: "topup" | "payment" | "refund";
+  description: string | null;
+  created_at: string;
 }
 
 export default function ProjectOverviewPage() {
@@ -28,6 +37,9 @@ export default function ProjectOverviewPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [memberEmail, setMemberEmail] = useState("");
   const [memberBusy, setMemberBusy] = useState(false);
+  const [projectPoints, setProjectPoints] = useState(0);
+  const [projectTx, setProjectTx] = useState<ProjectWalletTransaction[]>([]);
+  const [walletBusy, setWalletBusy] = useState(false);
 
   const loading = projLoading || charsLoading || memesLoading;
 
@@ -43,9 +55,22 @@ export default function ProjectOverviewPage() {
     }
   };
 
+  const fetchProjectWallet = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/wallet`);
+      const data = await res.json();
+      if (!res.ok) return;
+      setProjectPoints(Number(data.points || 0));
+      setProjectTx((data.transactions || []) as ProjectWalletTransaction[]);
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     if (!projectId) return;
     fetchMembers();
+    fetchProjectWallet();
   }, [projectId]);
 
   const addMember = async () => {
@@ -86,6 +111,25 @@ export default function ProjectOverviewPage() {
       }
     } finally {
       setMemberBusy(false);
+    }
+  };
+
+  const topupProjectWallet = async (packageId: string) => {
+    setWalletBusy(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/wallet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packageId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data?.error || "Không thể nạp ví dự án");
+      } else {
+        fetchProjectWallet();
+      }
+    } finally {
+      setWalletBusy(false);
     }
   };
 
@@ -153,6 +197,50 @@ export default function ProjectOverviewPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        <div className="mb-8">
+          <Card>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold th-text-primary">Ví dự án</h2>
+                <span className="text-sm th-text-muted">{projectPoints.toLocaleString("vi-VN")} pts</span>
+              </div>
+
+              {isOwner && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {POINT_PACKAGES.slice(0, 4).map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      onClick={() => topupProjectWallet(pkg.id)}
+                      disabled={walletBusy}
+                      className="p-3 rounded-xl border text-left th-bg-hover disabled:opacity-60"
+                      style={{ borderColor: "var(--border-primary)" }}
+                    >
+                      <p className="text-xs font-semibold th-text-primary">{pkg.name}</p>
+                      <p className="text-xs th-text-muted">+{pkg.points} pts</p>
+                      <p className="text-xs th-text-secondary mt-1">{formatVND(pkg.price)}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {projectTx.slice(0, 5).map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "var(--bg-tertiary)" }}>
+                    <div>
+                      <p className="text-sm th-text-primary">{tx.description || tx.type}</p>
+                      <p className="text-xs th-text-muted">{new Date(tx.created_at).toLocaleString("vi-VN")}</p>
+                    </div>
+                    <span className="text-sm font-semibold th-text-primary">{tx.type === "payment" ? "-" : "+"}{tx.amount} pts</span>
+                  </div>
+                ))}
+                {projectTx.length === 0 && (
+                  <p className="text-sm th-text-muted">Chưa có giao dịch ví dự án.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Actions */}
