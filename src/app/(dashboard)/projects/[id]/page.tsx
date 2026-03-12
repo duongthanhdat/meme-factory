@@ -1,37 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useProject, useCharacters, useMemes } from "@/lib/use-store";
 import Sidebar from "@/components/layout/sidebar";
 import Card, { CardContent } from "@/components/ui/card";
 import Button from "@/components/ui/button";
-import { Users, Image, Zap, TrendingUp, Plus, ArrowRight, UserPlus, Trash2 } from "lucide-react";
-import { useWallet } from "@/contexts/WalletContext";
-
-interface ProjectMember {
-  user_id: string;
-  email: string;
-  role: string;
-  is_owner: boolean;
-}
-
-interface ProjectInvitation {
-  id: string;
-  invitee_user_id: string;
-  invitee_email: string;
-  status: "pending" | "accepted" | "rejected" | "cancelled";
-  created_at: string;
-}
-
-interface ProjectWalletTransaction {
-  id: string;
-  amount: number;
-  type: "topup" | "payment" | "refund";
-  description: string | null;
-  created_at: string;
-}
+import { Users, Image, Zap, TrendingUp, Plus, ArrowRight } from "lucide-react";
 
 export default function ProjectOverviewPage() {
   const params = useParams();
@@ -41,130 +16,8 @@ export default function ProjectOverviewPage() {
   const { project, loading: projLoading } = useProject(projectId);
   const { characters, loading: charsLoading } = useCharacters(projectId);
   const { memes, loading: memesLoading } = useMemes(projectId);
-  const { points: personalPoints, refreshBalance } = useWallet();
-  const [members, setMembers] = useState<ProjectMember[]>([]);
-  const [isOwner, setIsOwner] = useState(false);
-  const [memberEmail, setMemberEmail] = useState("");
-  const [memberBusy, setMemberBusy] = useState(false);
-  const [invitations, setInvitations] = useState<ProjectInvitation[]>([]);
-  const [projectPoints, setProjectPoints] = useState(0);
-  const [projectTx, setProjectTx] = useState<ProjectWalletTransaction[]>([]);
-  const [walletBusy, setWalletBusy] = useState(false);
-  const [depositPoints, setDepositPoints] = useState("50");
 
   const loading = projLoading || charsLoading || memesLoading;
-
-  const fetchMembers = async () => {
-    try {
-      const res = await fetch(`/api/projects/${projectId}/members`);
-      const data = await res.json();
-      if (!res.ok) return;
-      setMembers(data.members || []);
-      setIsOwner(Boolean(data.isOwner));
-      setInvitations(data.invitations || []);
-    } catch {
-      // ignore
-    }
-  };
-
-  const fetchProjectWallet = async () => {
-    try {
-      const res = await fetch(`/api/projects/${projectId}/wallet`);
-      const data = await res.json();
-      if (!res.ok) return;
-      setProjectPoints(Number(data.points || 0));
-      setProjectTx((data.transactions || []) as ProjectWalletTransaction[]);
-    } catch {
-      // ignore
-    }
-  };
-
-  useEffect(() => {
-    if (!projectId) return;
-    fetchMembers();
-    fetchProjectWallet();
-  }, [projectId]);
-
-  const addMember = async () => {
-    const email = memberEmail.trim();
-    if (!email) return;
-    setMemberBusy(true);
-    try {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data?.error || "Không thể thêm thành viên");
-      } else {
-        setMemberEmail("");
-        fetchMembers();
-      }
-    } finally {
-      setMemberBusy(false);
-    }
-  };
-
-  const cancelInvitation = async (invitationId: string) => {
-    const ok = window.confirm("Huỷ lời mời này?");
-    if (!ok) return;
-    setMemberBusy(true);
-    try {
-      const res = await fetch(`/api/projects/${projectId}/members?invitationId=${encodeURIComponent(invitationId)}`, {
-        method: "DELETE",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data?.error || "Không thể huỷ lời mời");
-      } else {
-        fetchMembers();
-      }
-    } finally {
-      setMemberBusy(false);
-    }
-  };
-
-  const removeMember = async (userId: string) => {
-    const ok = window.confirm("Xoá thành viên này khỏi dự án?");
-    if (!ok) return;
-    setMemberBusy(true);
-    try {
-      const res = await fetch(`/api/projects/${projectId}/members?userId=${encodeURIComponent(userId)}`, {
-        method: "DELETE",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data?.error || "Không thể xoá thành viên");
-      } else {
-        fetchMembers();
-      }
-    } finally {
-      setMemberBusy(false);
-    }
-  };
-
-  const topupProjectWallet = async (points: number) => {
-    if (!Number.isFinite(points) || points <= 0) return;
-    setWalletBusy(true);
-    try {
-      const res = await fetch(`/api/projects/${projectId}/wallet`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ points }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data?.error || "Không thể nạp ví dự án");
-      } else {
-        fetchProjectWallet();
-        refreshBalance();
-      }
-    } finally {
-      setWalletBusy(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -232,66 +85,8 @@ export default function ProjectOverviewPage() {
           ))}
         </div>
 
-        <div className="mb-8">
-          <Card>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold th-text-primary">Ví dự án</h2>
-                <span className="text-sm th-text-muted">{projectPoints.toLocaleString("vi-VN")} pts (cá nhân: {personalPoints.toLocaleString("vi-VN")} pts)</span>
-              </div>
-
-              {isOwner && (
-                <div className="space-y-2">
-                  <div className="flex gap-2 flex-wrap">
-                    {[10, 50, 120, 300].map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => setDepositPoints(String(v))}
-                        className="px-3 py-1.5 rounded-lg text-xs th-bg-tertiary th-text-secondary"
-                      >
-                        {v} pts
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      value={depositPoints}
-                      onChange={(e) => setDepositPoints(e.target.value)}
-                      className="px-3 py-2 rounded-xl text-sm th-bg-card th-text-primary"
-                      style={{ border: "1px solid var(--border-primary)" }}
-                    />
-                    <Button
-                      onClick={() => topupProjectWallet(Number(depositPoints))}
-                      disabled={walletBusy || !depositPoints || Number(depositPoints) <= 0}
-                    >
-                      Deposit points
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                {projectTx.slice(0, 5).map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "var(--bg-tertiary)" }}>
-                    <div>
-                      <p className="text-sm th-text-primary">{tx.description || tx.type}</p>
-                      <p className="text-xs th-text-muted">{new Date(tx.created_at).toLocaleString("vi-VN")}</p>
-                    </div>
-                    <span className="text-sm font-semibold th-text-primary">{tx.type === "payment" ? "-" : "+"}{tx.amount} pts</span>
-                  </div>
-                ))}
-                {projectTx.length === 0 && (
-                  <p className="text-sm th-text-muted">Chưa có giao dịch ví dự án.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
           <Card hover onClick={() => router.push(`/projects/${projectId}/generate`)}>
             <CardContent className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -321,86 +116,34 @@ export default function ProjectOverviewPage() {
               <ArrowRight size={18} className="th-text-muted" />
             </CardContent>
           </Card>
-        </div>
 
-        <div className="mb-8">
-          <Card>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold th-text-primary">Thành viên dự án</h2>
-                <span className="text-xs th-text-muted">{members.length} người</span>
-              </div>
-
-              {isOwner && (
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="email"
-                    placeholder="Nhập email để thêm vào dự án"
-                    value={memberEmail}
-                    onChange={(e) => setMemberEmail(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl text-sm th-bg-card th-text-primary"
-                    style={{ border: "1px solid var(--border-primary)" }}
-                  />
-                  <Button onClick={addMember} disabled={!memberEmail.trim() || memberBusy}>
-                    <UserPlus size={14} /> Gửi lời mời
-                  </Button>
+          <Card hover onClick={() => router.push(`/projects/${projectId}/members`)}>
+            <CardContent className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+                  <Users size={22} className="text-white" />
                 </div>
-              )}
-
-              <div className="space-y-2">
-                {members.map((m) => (
-                  <div
-                    key={m.user_id}
-                    className="flex items-center justify-between rounded-xl px-3 py-2"
-                    style={{ background: "var(--bg-tertiary)" }}
-                  >
-                    <div>
-                      <p className="text-sm th-text-primary">{m.email}</p>
-                      <p className="text-xs th-text-muted">{m.is_owner ? "Owner" : "Member"}</p>
-                    </div>
-                    {isOwner && !m.is_owner && (
-                      <button
-                        onClick={() => removeMember(m.user_id)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs"
-                        style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}
-                        disabled={memberBusy}
-                      >
-                        <Trash2 size={12} /> Xoá
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {isOwner && invitations.filter((i) => i.status === "pending").length > 0 && (
-                <div className="pt-2">
-                  <p className="text-xs th-text-muted mb-2">Lời mời đang chờ phản hồi</p>
-                  <div className="space-y-2">
-                    {invitations
-                      .filter((i) => i.status === "pending")
-                      .map((inv) => (
-                        <div
-                          key={inv.id}
-                          className="flex items-center justify-between rounded-xl px-3 py-2"
-                          style={{ background: "var(--bg-tertiary)" }}
-                        >
-                          <div>
-                            <p className="text-sm th-text-primary">{inv.invitee_email}</p>
-                            <p className="text-xs th-text-muted">Đã mời lúc {new Date(inv.created_at).toLocaleString("vi-VN")}</p>
-                          </div>
-                          <button
-                            onClick={() => cancelInvitation(inv.id)}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs"
-                            style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}
-                            disabled={memberBusy}
-                          >
-                            <Trash2 size={12} /> Huỷ mời
-                          </button>
-                        </div>
-                      ))}
-                  </div>
+                <div>
+                  <h3 className="font-semibold th-text-primary">Thành viên</h3>
+                  <p className="text-sm th-text-tertiary">Mời và quản lý cộng tác</p>
                 </div>
-              )}
+              </div>
+              <ArrowRight size={18} className="th-text-muted" />
+            </CardContent>
+          </Card>
+
+          <Card hover onClick={() => router.push(`/projects/${projectId}/wallet`)}>
+            <CardContent className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                  <Zap size={22} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold th-text-primary">Ví dự án</h3>
+                  <p className="text-sm th-text-tertiary">Deposit points cho team</p>
+                </div>
+              </div>
+              <ArrowRight size={18} className="th-text-muted" />
             </CardContent>
           </Card>
         </div>

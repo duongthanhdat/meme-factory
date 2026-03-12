@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Wallet,
+  UserPlus,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -101,6 +102,8 @@ export default function Sidebar({ projectId, projectName }: SidebarProps) {
   const projectNav = projectId
     ? [
         { href: `/projects/${projectId}`, label: "Tổng quan", icon: Sparkles },
+        { href: `/projects/${projectId}/members`, label: "Thành viên", icon: UserPlus },
+        { href: `/projects/${projectId}/wallet`, label: "Ví dự án", icon: Coins },
         { href: `/projects/${projectId}/characters`, label: "Nhân vật", icon: Users },
         { href: `/projects/${projectId}/generate`, label: "Tạo Meme", icon: Zap },
         { href: `/projects/${projectId}/gallery`, label: "Bộ sưu tập", icon: Image },
