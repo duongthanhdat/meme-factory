@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID || "G-6VSHM22RWN";
+const GA_ID = "G-6VSHM22RWN";
 
 const inter = Inter({
   variable: "--font-inter",
