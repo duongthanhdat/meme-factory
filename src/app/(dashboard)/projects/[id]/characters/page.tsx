@@ -30,27 +30,10 @@ import {
   Check,
 } from "lucide-react";
 import { BulkUploader } from "@/components/ui/bulk-uploader";
-import type { Character, EmotionTag } from "@/types/database";
+import type { Character } from "@/types/database";
 import { PROMPT_TEMPLATES, type PromptTemplate } from "@/lib/prompt-templates";
 import { useWallet } from "@/contexts/WalletContext";
 import { trackEvent } from "@/lib/analytics";
-
-const EMOTION_OPTIONS: { value: EmotionTag; label: string; emoji: string }[] = [
-  { value: "happy", label: "Vui", emoji: "😊" },
-  { value: "sad", label: "Buồn", emoji: "😢" },
-  { value: "angry", label: "Giận", emoji: "😠" },
-  { value: "surprised", label: "Ngạc nhiên", emoji: "😲" },
-  { value: "confused", label: "Bối rối", emoji: "😕" },
-  { value: "cool", label: "Cool", emoji: "😎" },
-  { value: "love", label: "Yêu", emoji: "😍" },
-  { value: "scared", label: "Sợ", emoji: "😱" },
-  { value: "thinking", label: "Suy nghĩ", emoji: "🤔" },
-  { value: "laughing", label: "Cười lớn", emoji: "😂" },
-  { value: "crying", label: "Khóc", emoji: "😭" },
-  { value: "neutral", label: "Bình thường", emoji: "😐" },
-  { value: "excited", label: "Phấn khích", emoji: "🤩" },
-  { value: "tired", label: "Mệt", emoji: "😴" },
-];
 
 export default function CharactersPage() {
   const params = useParams();
@@ -76,7 +59,6 @@ export default function CharactersPage() {
   const [poseCharId, setPoseCharId] = useState<string | null>(null);
   const [poseForm, setPoseForm] = useState({
     name: "",
-    emotion: "neutral" as EmotionTag,
     description: "",
     is_transparent: false,
   });
@@ -87,12 +69,10 @@ export default function CharactersPage() {
   // Bulk upload
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [bulkUploadCharId, setBulkUploadCharId] = useState<string | null>(null);
-  const [bulkUploadEmotion, setBulkUploadEmotion] = useState<EmotionTag>("neutral");
 
   // AI Pose generation
   const [showAiPoseModal, setShowAiPoseModal] = useState(false);
   const [aiPoseCharId, setAiPoseCharId] = useState<string | null>(null);
-  const aiPoseEmotion: EmotionTag = "neutral";
   const [aiPoseStyle, setAiPoseStyle] = useState("");
   const [aiPoseGenerating, setAiPoseGenerating] = useState(false);
   const [aiPoseImage, setAiPoseImage] = useState<string | null>(null);
@@ -150,7 +130,7 @@ export default function CharactersPage() {
 
   const openAddPose = (charId: string) => {
     setPoseCharId(charId);
-    setPoseForm({ name: "", emotion: "neutral", description: "", is_transparent: false });
+    setPoseForm({ name: "", description: "", is_transparent: false });
     setPoseFile(null);
     setPosePreview(null);
     setShowPoseModal(true);
@@ -169,7 +149,7 @@ export default function CharactersPage() {
     if (!poseFile || !poseCharId) return;
     setPoseSaving(true);
     try {
-      await addPose(poseCharId, { ...poseForm, file: poseFile });
+      await addPose(poseCharId, { ...poseForm, emotion: "neutral", file: poseFile });
       setShowPoseModal(false);
       toast.success("Đã tải lên tư thế thành công");
     } catch (err) {
@@ -180,7 +160,6 @@ export default function CharactersPage() {
 
   const openBulkUpload = (charId: string) => {
     setBulkUploadCharId(charId);
-    setBulkUploadEmotion("neutral");
     setShowBulkUploadModal(true);
   };
 
@@ -189,7 +168,7 @@ export default function CharactersPage() {
     const nameWithoutExt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
     await addPose(bulkUploadCharId, {
       name: nameWithoutExt || "Pose",
-      emotion: bulkUploadEmotion,
+      emotion: "neutral",
       description: "",
       is_transparent: false,
       file,
@@ -565,7 +544,6 @@ export default function CharactersPage() {
                     ) : (
                       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                         {char.poses.map((pose) => {
-                          const emotionInfo = EMOTION_OPTIONS.find((e) => e.value === pose.emotion);
                           return (
                             <div key={pose.id} className="group relative th-bg-tertiary rounded-xl overflow-hidden">
                               <div className="aspect-square flex items-center justify-center" style={{ background: "var(--bg-tertiary)", opacity: 0.5 }}>
@@ -573,14 +551,14 @@ export default function CharactersPage() {
                                   <img src={pose.image_url} alt={pose.name} className="w-full h-full object-contain" />
                                 ) : (
                                   <div className="text-center p-2">
-                                    <p className="text-2xl">{emotionInfo?.emoji || "😐"}</p>
+                                    <ImageIcon size={24} className="mx-auto th-text-muted" />
                                     <p className="text-xs th-text-tertiary mt-1">{pose.name}</p>
                                   </div>
                                 )}
                               </div>
                               <div className="p-2">
                                 <p className="text-xs th-text-primary truncate">{pose.name}</p>
-                                <p className="text-xs th-text-tertiary">{emotionInfo?.emoji} {emotionInfo?.label || pose.emotion}</p>
+                                <p className="text-xs th-text-tertiary truncate">{pose.description || "Ảnh pose"}</p>
                               </div>
                               <button
                                 aria-label={`Xoá tư thế ${pose.name}`}
@@ -737,19 +715,6 @@ export default function CharactersPage() {
               </div>
             </div>
             <Input id="pose-name" label="Tên tư thế" placeholder='VD: "Giơ tay ăn mừng", "Khóc lóc", "Ngồi suy nghĩ"' value={poseForm.name} onChange={(e) => setPoseForm((f) => ({ ...f, name: e.target.value }))} required />
-            <div>
-              <label className="block text-sm font-medium th-text-secondary mb-1.5">Biểu cảm</label>
-              <div className="grid grid-cols-4 gap-2">
-                {EMOTION_OPTIONS.map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => setPoseForm((f) => ({ ...f, emotion: opt.value }))}
-                    className={`px-2 py-2 rounded-lg text-xs text-center transition-all border ${
-                      poseForm.emotion === opt.value ? "th-border-accent th-text-accent th-bg-accent-light" : "th-bg-tertiary th-border th-text-secondary th-bg-hover"
-                    }`}>
-                    <span className="text-base">{opt.emoji}</span><br />{opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
             <Textarea id="pose-desc" label="Mô tả (tuỳ chọn)" placeholder="Mô tả tư thế này để AI hiểu ngữ cảnh" value={poseForm.description} onChange={(e) => setPoseForm((f) => ({ ...f, description: e.target.value }))} rows={2} />
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={poseForm.is_transparent} onChange={(e) => setPoseForm((f) => ({ ...f, is_transparent: e.target.checked }))} className="w-4 h-4 rounded accent-[var(--accent)]" style={{ borderColor: "var(--border-primary)", background: "var(--bg-tertiary)" }} />
@@ -781,22 +746,6 @@ export default function CharactersPage() {
                 </div>
               );
             })()}
-
-            {/* Emotion selector for all uploads */}
-            <div>
-              <label className="block text-sm font-medium th-text-secondary mb-1.5">Cảm xúc mặc định cho tất cả ảnh</label>
-              <div className="grid grid-cols-7 gap-1.5">
-                {EMOTION_OPTIONS.map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => setBulkUploadEmotion(opt.value)}
-                    className={`px-1 py-2 rounded-lg text-xs text-center transition-all border ${
-                      bulkUploadEmotion === opt.value ? "th-border-accent th-text-accent th-bg-accent-light" : "th-bg-tertiary th-border th-text-secondary th-bg-hover"
-                    }`}>
-                    <span className="text-base block">{opt.emoji}</span>
-                    <span className="text-[10px] block mt-0.5">{opt.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Bulk Uploader */}
             <BulkUploader
