@@ -26,6 +26,8 @@ import {
   Loader2,
   RotateCcw,
   Download,
+  Brain,
+  Check,
 } from "lucide-react";
 import { BulkUploader } from "@/components/ui/bulk-uploader";
 import type { Character, EmotionTag } from "@/types/database";
@@ -90,7 +92,7 @@ export default function CharactersPage() {
   // AI Pose generation
   const [showAiPoseModal, setShowAiPoseModal] = useState(false);
   const [aiPoseCharId, setAiPoseCharId] = useState<string | null>(null);
-  const [aiPoseEmotion, setAiPoseEmotion] = useState<EmotionTag>("happy");
+  const aiPoseEmotion: EmotionTag = "neutral";
   const [aiPoseStyle, setAiPoseStyle] = useState("");
   const [aiPoseGenerating, setAiPoseGenerating] = useState(false);
   const [aiPoseImage, setAiPoseImage] = useState<string | null>(null);
@@ -99,6 +101,22 @@ export default function CharactersPage() {
   const [aiPoseRequestId, setAiPoseRequestId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
   const [showTemplateGuide, setShowTemplateGuide] = useState(false);
+
+  // AI character roster suggestion
+  const [showSuggestModal, setShowSuggestModal] = useState(false);
+  const [fanpageBrief, setFanpageBrief] = useState("");
+  const [suggestCount, setSuggestCount] = useState(4);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [suggestItems, setSuggestItems] = useState<Array<{
+    selected: boolean;
+    name: string;
+    role: string;
+    personality: string;
+    description: string;
+    why_fit: string;
+  }>>([]);
+  const [creatingSuggested, setCreatingSuggested] = useState(false);
+  const [autoGenerateBaseImage, setAutoGenerateBaseImage] = useState(true);
 
   const openCreateChar = () => {
     setEditingChar(null);
@@ -180,7 +198,6 @@ export default function CharactersPage() {
 
   const openAiPose = (charId: string) => {
     setAiPoseCharId(charId);
-    setAiPoseEmotion("happy");
     setAiPoseStyle("");
     setAiPoseImage(null);
     setAiPoseError(null);
@@ -192,6 +209,126 @@ export default function CharactersPage() {
   const selectTemplate = (template: PromptTemplate) => {
     setSelectedTemplate(template);
     setShowTemplateGuide(false);
+  };
+
+  const handleSuggestCharacters = async () => {
+    if (!fanpageBrief.trim()) {
+      toast.error("Nhập mô tả fanpage trước");
+      return;
+    }
+
+    trackEvent("suggest_characters_started", {
+      project_id: project?.id || projectId,
+      count: suggestCount,
+    });
+
+    setSuggestLoading(true);
+    try {
+      const res = await fetch("/api/ai/suggest-characters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: project?.id || projectId,
+          fanpage_description: fanpageBrief.trim(),
+          count: suggestCount,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error || "Không thể gợi ý nhân vật");
+        return;
+      }
+
+      const items = (data.suggestions || []).map((s: {
+        name: string;
+        role: string;
+        personality: string;
+        description: string;
+        why_fit: string;
+      }) => ({ selected: true, ...s }));
+      setSuggestItems(items);
+      trackEvent("suggest_characters_success", {
+        project_id: project?.id || projectId,
+        count: items.length,
+      });
+    } catch {
+      trackEvent("suggest_characters_failed", {
+        project_id: project?.id || projectId,
+      });
+      toast.error("Không thể gợi ý nhân vật lúc này");
+    } finally {
+      setSuggestLoading(false);
+    }
+  };
+
+  const handleCreateSuggestedCharacters = async () => {
+    const selected = suggestItems.filter((s) => s.selected);
+    if (selected.length === 0) {
+      toast.error("Chọn ít nhất 1 nhân vật");
+      return;
+    }
+
+    setCreatingSuggested(true);
+    trackEvent("bulk_character_create_started", {
+      project_id: project?.id || projectId,
+      count: selected.length,
+      auto_generate_base: autoGenerateBaseImage,
+    });
+    let success = 0;
+    let generated = 0;
+    for (const item of selected) {
+      const created = await createCharacter({
+        name: item.name,
+        personality: item.personality,
+        description: `${item.description}${item.role ? `. Vai trò: ${item.role}` : ""}`,
+      });
+      if (created) {
+        success += 1;
+
+        if (autoGenerateBaseImage) {
+          const result = await generateImage({
+            project_id: project?.id || projectId,
+            type: "character",
+            characterName: created.name,
+            characterDescription: `${created.description}${created.personality ? `. Tính cách: ${created.personality}` : ""}`,
+            emotion: "neutral",
+            style: project?.style_prompt || undefined,
+          });
+
+          if (result.image) {
+            const response = await fetch(`data:image/png;base64,${result.image}`);
+            const blob = await response.blob();
+            const file = new File([blob], `ai-character-base-${Date.now()}.png`, { type: "image/png" });
+            await addPose(created.id, {
+              name: "Base (AI)",
+              emotion: "neutral",
+              description: "AI generated base character image",
+              is_transparent: false,
+              file,
+            });
+            generated += 1;
+          }
+        }
+      }
+    }
+    setCreatingSuggested(false);
+
+    if (success > 0) {
+      trackEvent("bulk_character_create_completed", {
+        project_id: project?.id || projectId,
+        created: success,
+        generated_base: generated,
+      });
+      toast.success(
+        autoGenerateBaseImage
+          ? `Đã tạo ${success}/${selected.length} nhân vật, generate ảnh base ${generated} nhân vật`
+          : `Đã tạo ${success}/${selected.length} nhân vật`
+      );
+      setShowSuggestModal(false);
+      setSuggestItems([]);
+    } else {
+      toast.error("Không tạo được nhân vật nào");
+    }
   };
 
   const handleAiPoseGenerate = async () => {
@@ -219,7 +356,7 @@ export default function CharactersPage() {
         type: "character",
         characterName: char.name,
         characterDescription: fullDescription || `Nhân vật ${char.name} cho fanpage meme Việt Nam`,
-        emotion: EMOTION_OPTIONS.find((e) => e.value === aiPoseEmotion)?.label || aiPoseEmotion,
+        emotion: "neutral",
         style: styleToUse,
       });
 
@@ -265,13 +402,11 @@ export default function CharactersPage() {
       // Convert base64 to File for addPose
       const response = await fetch(`data:image/png;base64,${aiPoseImage}`);
       const blob = await response.blob();
-      const file = new File([blob], `ai-pose-${aiPoseEmotion}-${Date.now()}.png`, { type: "image/png" });
-
-      const emotionInfo = EMOTION_OPTIONS.find((e) => e.value === aiPoseEmotion);
+      const file = new File([blob], `ai-character-base-${Date.now()}.png`, { type: "image/png" });
       const newPose = await addPose(aiPoseCharId, {
-        name: `${emotionInfo?.label || aiPoseEmotion} (AI)`,
-        emotion: aiPoseEmotion,
-        description: `AI generated pose - ${emotionInfo?.label || aiPoseEmotion}`,
+        name: "Base (AI)",
+        emotion: "neutral",
+        description: "AI generated base character image",
         is_transparent: false,
         file,
       });
@@ -289,7 +424,7 @@ export default function CharactersPage() {
             output_title: newPose.name,
             metadata: {
               character_id: aiPoseCharId,
-              emotion: aiPoseEmotion,
+              emotion: "neutral",
             },
           }),
         });
@@ -312,7 +447,7 @@ export default function CharactersPage() {
   const handleDownloadAiPose = () => {
     if (!aiPoseImage) return;
     const link = document.createElement("a");
-    link.download = `pose-ai-${aiPoseEmotion}-${Date.now()}.png`;
+    link.download = `character-ai-${Date.now()}.png`;
     link.href = `data:image/png;base64,${aiPoseImage}`;
     link.click();
   };
@@ -325,12 +460,18 @@ export default function CharactersPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold th-text-primary">Nhân vật</h1>
-            <p className="th-text-tertiary mt-1">Quản lý nhân vật và biểu cảm cho fanpage</p>
+            <p className="th-text-tertiary mt-1">Quản lý character identity cho fanpage</p>
           </div>
-          <Button onClick={openCreateChar} size="lg">
-            <Plus size={18} />
-            Thêm nhân vật
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setShowSuggestModal(true)} size="lg">
+              <Brain size={18} />
+              AI gợi ý bộ nhân vật
+            </Button>
+            <Button onClick={openCreateChar} size="lg">
+              <Plus size={18} />
+              Thêm nhân vật
+            </Button>
+          </div>
         </div>
 
         {/* Characters List */}
@@ -346,11 +487,17 @@ export default function CharactersPage() {
               <SmilePlus size={32} className="th-text-muted" />
             </div>
             <h3 className="text-lg font-medium th-text-secondary">Chưa có nhân vật nào</h3>
-            <p className="th-text-muted mt-1 mb-5">Tạo nhân vật và tải lên biểu cảm để bắt đầu làm meme</p>
-            <Button onClick={openCreateChar}>
-              <Plus size={18} />
-              Tạo nhân vật đầu tiên
-            </Button>
+            <p className="th-text-muted mt-1 mb-5">Mô tả fanpage để AI gợi ý dàn nhân vật ngay lập tức</p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setShowSuggestModal(true)}>
+                <Brain size={18} />
+                AI gợi ý nhân vật
+              </Button>
+              <Button onClick={openCreateChar}>
+                <Plus size={18} />
+                Tạo thủ công
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -467,6 +614,110 @@ export default function CharactersPage() {
           </form>
         </Modal>
 
+        {/* AI Suggest Character Roster Modal */}
+        <Modal isOpen={showSuggestModal} onClose={() => setShowSuggestModal(false)} title="AI gợi ý bộ nhân vật" size="xl">
+          <div className="space-y-4">
+            <Textarea
+              id="fanpage-brief"
+              label="Mô tả fanpage"
+              placeholder="VD: Fanpage tài chính cho người mới, giọng hài hước đời thường, target 22-35 tuổi..."
+              value={fanpageBrief}
+              onChange={(e) => setFanpageBrief(e.target.value)}
+              rows={4}
+            />
+            <div className="flex items-center gap-2">
+              <label className="text-sm th-text-secondary">Số nhân vật:</label>
+              <select
+                value={suggestCount}
+                onChange={(e) => setSuggestCount(Number(e.target.value))}
+                className="px-2 py-1 rounded-lg th-bg-card th-text-primary"
+                style={{ border: "1px solid var(--border-primary)" }}
+              >
+                {[3, 4, 5, 6].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <Button onClick={handleSuggestCharacters} loading={suggestLoading}>
+                <Brain size={16} /> Gợi ý
+              </Button>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm th-text-secondary">
+              <input
+                type="checkbox"
+                checked={autoGenerateBaseImage}
+                onChange={(e) => setAutoGenerateBaseImage(e.target.checked)}
+              />
+              Tự generate ảnh base cho mỗi nhân vật sau khi tạo (tốn points)
+            </label>
+
+            {suggestItems.length > 0 && (
+              <div className="space-y-2 max-h-[360px] overflow-auto pr-1">
+                {suggestItems.map((item, idx) => (
+                  <div key={`${item.name}-${idx}`} className="p-3 rounded-xl border space-y-2" style={{ borderColor: "var(--border-primary)", background: "var(--bg-tertiary)" }}>
+                    <label className="flex items-center gap-2 text-sm th-text-primary">
+                      <input
+                        type="checkbox"
+                        checked={item.selected}
+                        onChange={(e) => {
+                          setSuggestItems((prev) => prev.map((s, i) => (i === idx ? { ...s, selected: e.target.checked } : s)));
+                        }}
+                      />
+                      <Check size={14} /> Chọn nhân vật này
+                    </label>
+                    <Input
+                      id={`suggest-name-${idx}`}
+                      label="Tên"
+                      value={item.name}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSuggestItems((prev) => prev.map((s, i) => (i === idx ? { ...s, name: value } : s)));
+                      }}
+                    />
+                    <Input
+                      id={`suggest-role-${idx}`}
+                      label="Vai trò"
+                      value={item.role}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSuggestItems((prev) => prev.map((s, i) => (i === idx ? { ...s, role: value } : s)));
+                      }}
+                    />
+                    <Textarea
+                      id={`suggest-personality-${idx}`}
+                      label="Tính cách"
+                      value={item.personality}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSuggestItems((prev) => prev.map((s, i) => (i === idx ? { ...s, personality: value } : s)));
+                      }}
+                      rows={2}
+                    />
+                    <Textarea
+                      id={`suggest-description-${idx}`}
+                      label="Mô tả ngoại hình"
+                      value={item.description}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSuggestItems((prev) => prev.map((s, i) => (i === idx ? { ...s, description: value } : s)));
+                      }}
+                      rows={2}
+                    />
+                    <p className="text-xs th-text-muted">Vì sao phù hợp: {item.why_fit}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setShowSuggestModal(false)}>Đóng</Button>
+              <Button onClick={handleCreateSuggestedCharacters} loading={creatingSuggested} disabled={suggestItems.length === 0}>
+                Tạo nhân vật đã chọn
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
         {/* Upload Pose Modal */}
         <Modal isOpen={showPoseModal} onClose={() => setShowPoseModal(false)} title="Tải lên tư thế">
           <form onSubmit={savePose} className="space-y-4">
@@ -559,8 +810,8 @@ export default function CharactersPage() {
           </div>
         </Modal>
 
-        {/* AI Generate Pose Modal */}
-        <Modal isOpen={showAiPoseModal} onClose={() => setShowAiPoseModal(false)} title="Tạo tư thế bằng AI" size="xl">
+        {/* AI Generate Character Modal */}
+        <Modal isOpen={showAiPoseModal} onClose={() => setShowAiPoseModal(false)} title="Tạo character bằng AI" size="xl">
           <div className="space-y-5">
             {/* Character info */}
             {aiPoseCharId && (() => {
@@ -665,20 +916,8 @@ export default function CharactersPage() {
               </div>
             )}
 
-            {/* Emotion selector */}
-            <div>
-              <label className="block text-sm font-medium th-text-secondary mb-1.5">Biểu cảm / Tư thế</label>
-              <div className="grid grid-cols-7 gap-1.5">
-                {EMOTION_OPTIONS.map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => setAiPoseEmotion(opt.value)}
-                    className={`px-1 py-2 rounded-lg text-xs text-center transition-all border ${
-                      aiPoseEmotion === opt.value ? "th-border-accent th-text-accent th-bg-accent-light" : "th-bg-tertiary th-border th-text-secondary th-bg-hover"
-                    }`}>
-                    <span className="text-base block">{opt.emoji}</span>
-                    <span className="text-[10px] block mt-0.5">{opt.label}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="p-2 rounded-lg th-bg-tertiary text-xs th-text-secondary">
+              AI sẽ tạo 1 ảnh <strong>base character</strong> (không khóa emotion). Emotion sẽ được xử lý theo từng meme sau này.
             </div>
 
             {/* Custom style override */}
@@ -701,7 +940,7 @@ export default function CharactersPage() {
             {!aiPoseImage && !aiPoseGenerating && (
               <Button className="w-full" size="lg" onClick={handleAiPoseGenerate}>
                 <Wand2 size={18} />
-                Tạo Pose bằng AI ({selectedTemplate?.nameVi || "Không template"}) — 3 pts
+                Tạo Character bằng AI ({selectedTemplate?.nameVi || "Không template"}) — 3 pts
               </Button>
             )}
 
@@ -711,7 +950,7 @@ export default function CharactersPage() {
                 <div className="w-16 h-16 rounded-2xl th-bg-accent-light flex items-center justify-center">
                   <Loader2 size={28} className="animate-spin" style={{ color: "var(--accent)" }} />
                 </div>
-                <p className="th-text-primary font-medium">AI đang tạo pose...</p>
+                <p className="th-text-primary font-medium">AI đang tạo character...</p>
                 <p className="th-text-tertiary text-xs">Quá trình này có thể mất 10-30 giây</p>
               </div>
             )}

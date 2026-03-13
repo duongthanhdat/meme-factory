@@ -136,12 +136,16 @@ export async function POST(request: NextRequest) {
       case "character": {
         const { characterName, characterDescription, emotion, style, existingPoseImages } = body;
 
-        if (!characterName || !characterDescription || !emotion) {
+        if (!characterName || !characterDescription) {
           throw new Error("VALIDATION_CHARACTER_REQUIRED");
         }
 
         result = await generateCharacterPose({
-          characterName, characterDescription, emotion, style, existingPoseImages,
+          characterName,
+          characterDescription,
+          emotion: emotion || "neutral",
+          style,
+          existingPoseImages,
         });
         break;
       }
@@ -206,7 +210,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Cần headline hoặc prompt mô tả để tạo meme" }, { status: 400 });
     }
     if (rawMessage.includes("VALIDATION_CHARACTER_REQUIRED")) {
-      return NextResponse.json({ error: "characterName, characterDescription, and emotion are required" }, { status: 400 });
+      return NextResponse.json({ error: "characterName và characterDescription là bắt buộc" }, { status: 400 });
     }
     if (rawMessage.includes("VALIDATION_BACKGROUND_REQUIRED")) {
       return NextResponse.json({ error: "description is required for background generation" }, { status: 400 });

@@ -89,7 +89,7 @@ export default function CharacterDetailPage() {
 
   // AI Pose generation
   const [showAiPoseModal, setShowAiPoseModal] = useState(false);
-  const [aiPoseEmotion, setAiPoseEmotion] = useState<EmotionTag>("happy");
+  const aiPoseEmotion: EmotionTag = "neutral";
   const [aiPoseStyle, setAiPoseStyle] = useState("");
   const [aiPoseGenerating, setAiPoseGenerating] = useState(false);
   const [aiPoseImage, setAiPoseImage] = useState<string | null>(null);
@@ -172,7 +172,6 @@ export default function CharacterDetailPage() {
   };
 
   const openAiPose = () => {
-    setAiPoseEmotion("happy");
     setAiPoseStyle("");
     setAiPoseImage(null);
     setAiPoseError(null);
@@ -205,7 +204,7 @@ export default function CharacterDetailPage() {
         type: "character",
         characterName: character.name,
         characterDescription: fullDescription || `Nhân vật ${character.name} cho fanpage meme Việt Nam`,
-        emotion: EMOTION_OPTIONS.find((e) => e.value === aiPoseEmotion)?.label || aiPoseEmotion,
+        emotion: "neutral",
         style: styleToUse,
       });
 
@@ -250,13 +249,11 @@ export default function CharacterDetailPage() {
     try {
       const response = await fetch(`data:image/png;base64,${aiPoseImage}`);
       const blob = await response.blob();
-      const file = new File([blob], `ai-pose-${aiPoseEmotion}-${Date.now()}.png`, { type: "image/png" });
-
-      const emotionInfo = EMOTION_OPTIONS.find((e) => e.value === aiPoseEmotion);
+      const file = new File([blob], `ai-character-base-${Date.now()}.png`, { type: "image/png" });
       const newPose = await addPose(characterId, {
-        name: `${emotionInfo?.label || aiPoseEmotion} (AI)`,
-        emotion: aiPoseEmotion,
-        description: `AI generated pose - ${emotionInfo?.label || aiPoseEmotion}`,
+        name: "Base (AI)",
+        emotion: "neutral",
+        description: "AI generated base character image",
         is_transparent: false,
         file,
       });
@@ -274,7 +271,7 @@ export default function CharacterDetailPage() {
             output_title: newPose.name,
             metadata: {
               character_id: characterId,
-              emotion: aiPoseEmotion,
+              emotion: "neutral",
             },
           }),
         });
@@ -297,7 +294,7 @@ export default function CharacterDetailPage() {
   const handleDownloadAiPose = () => {
     if (!aiPoseImage) return;
     const link = document.createElement("a");
-    link.download = `pose-ai-${aiPoseEmotion}-${Date.now()}.png`;
+    link.download = `character-ai-${Date.now()}.png`;
     link.href = `data:image/png;base64,${aiPoseImage}`;
     link.click();
   };
@@ -625,7 +622,7 @@ export default function CharacterDetailPage() {
         </Modal>
 
         {/* AI Generate Pose Modal */}
-        <Modal isOpen={showAiPoseModal} onClose={() => setShowAiPoseModal(false)} title="Tạo tư thế bằng AI" size="xl">
+        <Modal isOpen={showAiPoseModal} onClose={() => setShowAiPoseModal(false)} title="Tạo character bằng AI" size="xl">
           <div className="space-y-5">
             {/* Character info */}
             <div className="flex items-center gap-3 p-3 rounded-xl th-bg-tertiary">
@@ -690,20 +687,8 @@ export default function CharacterDetailPage() {
               </div>
             </div>
 
-            {/* Emotion selector */}
-            <div>
-              <label className="block text-sm font-medium th-text-secondary mb-1.5">Biểu cảm / Tư thế</label>
-              <div className="grid grid-cols-7 gap-1.5">
-                {EMOTION_OPTIONS.map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => setAiPoseEmotion(opt.value)}
-                    className={`px-1 py-2 rounded-lg text-xs text-center transition-all border ${
-                      aiPoseEmotion === opt.value ? "th-border-accent th-text-accent th-bg-accent-light" : "th-bg-tertiary th-border th-text-secondary th-bg-hover"
-                    }`}>
-                    <span className="text-base block">{opt.emoji}</span>
-                    <span className="text-[10px] block mt-0.5">{opt.label}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="p-2 rounded-lg th-bg-tertiary text-xs th-text-secondary">
+              AI sẽ tạo 1 ảnh <strong>base character</strong> (không khóa emotion). Emotion sẽ được xử lý theo từng meme sau này.
             </div>
 
             {/* Custom style override */}
@@ -726,7 +711,7 @@ export default function CharacterDetailPage() {
             {!aiPoseImage && !aiPoseGenerating && (
               <Button className="w-full" size="lg" onClick={handleAiPoseGenerate}>
                 <Wand2 size={18} />
-                Tạo Pose bằng AI ({selectedTemplate?.nameVi || "Không template"}) — 3 pts
+                Tạo Character bằng AI ({selectedTemplate?.nameVi || "Không template"}) — 3 pts
               </Button>
             )}
 
@@ -736,7 +721,7 @@ export default function CharacterDetailPage() {
                 <div className="w-16 h-16 rounded-2xl th-bg-accent-light flex items-center justify-center">
                   <Loader2 size={28} className="animate-spin" style={{ color: "var(--accent)" }} />
                 </div>
-                <p className="th-text-primary font-medium">AI đang tạo pose...</p>
+                <p className="th-text-primary font-medium">AI đang tạo character...</p>
                 <p className="th-text-tertiary text-xs">Quá trình này có thể mất 10-30 giây</p>
               </div>
             )}

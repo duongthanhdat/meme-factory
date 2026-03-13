@@ -31,6 +31,67 @@ export interface MemeContentResult {
   }[];
 }
 
+export interface SuggestedCharacterResult {
+  name: string;
+  role: string;
+  personality: string;
+  description: string;
+  why_fit: string;
+}
+
+export async function suggestCharactersForFanpage(params: {
+  fanpageDescription: string;
+  projectStyle?: string;
+  count?: number;
+}): Promise<SuggestedCharacterResult[]> {
+  const ai = await getClient();
+  const count = Math.min(Math.max(params.count || 4, 2), 6);
+
+  const prompt = `Bạn là chuyên gia xây mascot/fanpage character cho social content Việt Nam.
+
+Mô tả fanpage:
+${params.fanpageDescription}
+
+${params.projectStyle ? `Phong cách thương hiệu: ${params.projectStyle}` : ""}
+
+Nhiệm vụ:
+- Gợi ý ${count} nhân vật mascot phù hợp để làm nội dung fanpage lâu dài.
+- Mỗi nhân vật phải khác nhau rõ về vai trò trong team content.
+- Viết tiếng Việt tự nhiên, ngắn gọn, thực dụng.
+- Tránh tên quá dài hoặc trùng nhau.
+
+Trả về JSON array theo schema:
+[
+  {
+    "name": "...",
+    "role": "...",
+    "personality": "...",
+    "description": "...",
+    "why_fit": "..."
+  }
+]
+
+Chỉ trả JSON array, không kèm văn bản khác.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: [{ text: prompt }],
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0.7,
+    },
+  });
+
+  const text = response.text ?? "[]";
+  try {
+    const parsed = JSON.parse(text) as SuggestedCharacterResult[];
+    return Array.isArray(parsed) ? parsed.slice(0, count) : [];
+  } catch {
+    console.error("Failed to parse character suggestion response:", text);
+    return [];
+  }
+}
+
 export async function generateMemeContent(params: {
   idea: string;
   projectStyle?: string;

@@ -195,7 +195,7 @@ export interface ImageGenCharacterParams {
   type: "character";
   characterName: string;
   characterDescription: string;
-  emotion: string;
+  emotion?: string;
   style?: string;
   existingPoseImages?: { base64: string; mimeType: string }[];
 }
