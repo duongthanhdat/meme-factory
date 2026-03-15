@@ -41,6 +41,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ suggestions });
   } catch (error) {
     console.error("Suggest characters error:", error);
+    const msg = error instanceof Error ? error.message : "";
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("rate limit")) {
+      return NextResponse.json(
+        { error: "Hệ thống AI đang quá tải (hết quota ngày). Vui lòng thử lại sau vài giờ." },
+        { status: 429 }
+      );
+    }
     return NextResponse.json({ error: "Không thể gợi ý nhân vật lúc này" }, { status: 500 });
   }
 }

@@ -225,8 +225,11 @@ export async function POST(request: NextRequest) {
       userMessage = "Lỗi hệ thống khi xử lý points. Vui lòng thử lại.";
     } else if (rawMessage.includes("SAFETY") || rawMessage.includes("blocked")) {
       userMessage = "Nội dung bị từ chối bởi bộ lọc an toàn. Vui lòng thử ý tưởng khác.";
-    } else if (rawMessage.includes("quota") || rawMessage.includes("rate limit") || rawMessage.includes("429")) {
-      userMessage = "Hệ thống đang quá tải. Vui lòng thử lại sau ít phút.";
+    } else if (rawMessage.includes("quota") || rawMessage.includes("rate limit") || rawMessage.includes("429") || rawMessage.includes("RESOURCE_EXHAUSTED")) {
+      return NextResponse.json(
+        { error: "Hệ thống AI đang quá tải (hết quota ngày). Vui lòng thử lại sau vài giờ.", code: "RATE_LIMIT" },
+        { status: 429 }
+      );
     }
 
     return NextResponse.json({ error: userMessage }, { status: 500 });
