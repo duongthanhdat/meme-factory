@@ -85,6 +85,7 @@ export default function GeneratePage() {
   const [taggedCharacterIds, setTaggedCharacterIds] = useState<Set<string>>(new Set());
   const [oneOffCharacters, setOneOffCharacters] = useState<string[]>([]);
   const [oneOffInput, setOneOffInput] = useState("");
+  const [noCharacters, setNoCharacters] = useState(false);
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<string>>(new Set());
   const [showQuickCharacterModal, setShowQuickCharacterModal] = useState(false);
   const [quickCharacterSaving, setQuickCharacterSaving] = useState(false);
@@ -394,9 +395,9 @@ export default function GeneratePage() {
       const results = await generateContent({
         project_id: project?.id || projectId,
         idea: idea.trim(),
-        characters,
+        characters: noCharacters ? [] : characters,
         projectStyle: project?.style_prompt || undefined,
-        adHocCharacters: oneOffCharacters,
+        adHocCharacters: noCharacters ? [] : oneOffCharacters,
         referenceImages: refImages.length > 0
           ? refImages.map((img) => ({ base64: img.base64, mimeType: img.mimeType }))
           : undefined,
@@ -450,7 +451,7 @@ export default function GeneratePage() {
 
     const promptWithoutMentions = normalizedIdea.replace(/@([\p{L}\p{N}_\-\s]+)/gu, "$1").trim();
 
-    const selectedChars = characters.filter((c) => selectedCharacterIds.has(c.id));
+    const selectedChars = noCharacters ? [] : characters.filter((c) => selectedCharacterIds.has(c.id));
     const directVariation: ContentVariation = {
       content: {
         headline: "",
@@ -518,55 +519,66 @@ export default function GeneratePage() {
     setAiGenerationRequestId(null);
 
     try {
-      const taggedCharacters = characters.filter((c) => taggedCharacterIds.has(c.id));
       const buildFullDescription = (desc?: string, personality?: string) =>
         [desc, personality ? `Tính cách: ${personality}` : ""].filter(Boolean).join(". ");
 
-      const sourceCharacterInputs = taggedCharacters.length > 0
-        ? taggedCharacters.map((char) => {
-            const suggested = v.suggested_characters.find((sc) => sc.character_id === char.id);
+      let sourceCharacters: {
+        name: string;
+        emotion: string;
+        description: string;
+        poseImageBase64?: string;
+        poseMimeType?: string;
+      }[] = [];
+
+      if (!noCharacters) {
+        const taggedCharacters = characters.filter((c) => taggedCharacterIds.has(c.id));
+
+        const sourceCharacterInputs = taggedCharacters.length > 0
+          ? taggedCharacters.map((char) => {
+              const suggested = v.suggested_characters.find((sc) => sc.character_id === char.id);
+              return {
+                id: char.id,
+                name: char.name,
+                emotion: suggested?.suggested_emotion || suggested?.emotion || "neutral",
+                description: buildFullDescription(char.description, char.personality),
+              };
+            })
+          : v.suggested_characters.map((sc) => {
+              const char = characters.find((c) => c.id === sc.character_id);
+              return {
+                id: sc.character_id,
+                name: sc.character_name,
+                emotion: sc.suggested_emotion || sc.emotion,
+                description: buildFullDescription(char?.description, char?.personality),
+              };
+            });
+
+        sourceCharacters = await Promise.all(
+          sourceCharacterInputs.map(async (item) => {
+            const fullChar = characters.find((c) => c.id === item.id);
+            const suggestedPoseId = v.suggested_characters.find((sc) => sc.character_id === item.id)?.pose_id;
+            const selectedPose = fullChar?.poses.find((p) => p.id === suggestedPoseId) || fullChar?.poses[0];
+            const refUrl = selectedPose?.image_url || fullChar?.avatar_url || fullChar?.poses[0]?.image_url;
+
+            if (!fullChar) {
+              throw new Error(`Không tìm thấy dữ liệu nhân vật "${item.name}". Vui lòng chọn lại nhân vật.`);
+            }
+
+            if (!refUrl || refUrl.startsWith("/mock/")) {
+              throw new Error(`Nhân vật "${item.name}" chưa có ảnh ref hợp lệ. Vui lòng thêm pose/đặt avatar trước khi tạo ảnh.`);
+            }
+
+            const inline = await imageUrlToInlineData(refUrl);
             return {
-              id: char.id,
-              name: char.name,
-              emotion: suggested?.suggested_emotion || suggested?.emotion || "neutral",
-              description: buildFullDescription(char.description, char.personality),
+              name: item.name,
+              emotion: item.emotion,
+              description: item.description,
+              poseImageBase64: inline.base64,
+              poseMimeType: inline.mimeType,
             };
           })
-        : v.suggested_characters.map((sc) => {
-            const char = characters.find((c) => c.id === sc.character_id);
-            return {
-              id: sc.character_id,
-              name: sc.character_name,
-              emotion: sc.suggested_emotion || sc.emotion,
-              description: buildFullDescription(char?.description, char?.personality),
-            };
-          });
-
-      const sourceCharacters = await Promise.all(
-        sourceCharacterInputs.map(async (item) => {
-          const fullChar = characters.find((c) => c.id === item.id);
-          const suggestedPoseId = v.suggested_characters.find((sc) => sc.character_id === item.id)?.pose_id;
-          const selectedPose = fullChar?.poses.find((p) => p.id === suggestedPoseId) || fullChar?.poses[0];
-          const refUrl = selectedPose?.image_url || fullChar?.avatar_url || fullChar?.poses[0]?.image_url;
-
-          if (!fullChar) {
-            throw new Error(`Không tìm thấy dữ liệu nhân vật "${item.name}". Vui lòng chọn lại nhân vật.`);
-          }
-
-          if (!refUrl || refUrl.startsWith("/mock/")) {
-            throw new Error(`Nhân vật "${item.name}" chưa có ảnh ref hợp lệ. Vui lòng thêm pose/đặt avatar trước khi tạo ảnh.`);
-          }
-
-          const inline = await imageUrlToInlineData(refUrl);
-          return {
-            name: item.name,
-            emotion: item.emotion,
-            description: item.description,
-            poseImageBase64: inline.base64,
-            poseMimeType: inline.mimeType,
-          };
-        })
-      );
+        );
+      }
 
       const mergedRefImages = [...refImages, ...aiRefImages].slice(0, 4);
 
@@ -725,6 +737,7 @@ export default function GeneratePage() {
     setPrefillAppliedKey(null);
     setTaggedCharacterIds(new Set());
     setSelectedCharacterIds(new Set());
+    setNoCharacters(false);
   };
 
   if (loading) {
@@ -881,94 +894,114 @@ export default function GeneratePage() {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs th-text-tertiary">Nhân vật có sẵn (click để mention):</p>
-                    <Button size="sm" variant="outline" onClick={openQuickCharacterModal}>
-                      <Plus size={14} /> Tạo nhanh nhân vật
-                    </Button>
-                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer p-2 rounded-xl th-bg-tertiary">
+                    <input
+                      type="checkbox"
+                      checked={noCharacters}
+                      onChange={(e) => {
+                        setNoCharacters(e.target.checked);
+                        if (e.target.checked) {
+                          setSelectedCharacterIds(new Set());
+                          setOneOffCharacters([]);
+                          setTaggedCharacterIds(new Set());
+                        }
+                      }}
+                      className="w-4 h-4 accent-[var(--accent)]"
+                    />
+                    <span className="text-sm th-text-secondary">Không dùng nhân vật thư viện</span>
+                    <span className="text-xs th-text-muted ml-auto">VD: dùng người nổi tiếng, meme template...</span>
+                  </label>
 
-                  {characters.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {characters.map((c) => {
-                        const avatar = c.avatar_url || c.poses[0]?.image_url;
-                        const selected = selectedCharacterIds.has(c.id);
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => toggleSelectedCharacter(c.id)}
-                            className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all ${
-                              selected
-                                ? "th-border-accent th-bg-accent-light"
-                                : "th-bg-tertiary th-bg-hover th-border"
-                            }`}
-                          >
-                            <div className="w-9 h-9 rounded-lg overflow-hidden th-bg-card flex items-center justify-center text-xs font-bold th-text-muted">
-                              {avatar ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={avatar} alt={c.name} className="w-full h-full object-cover" />
-                              ) : (
-                                c.name[0]?.toUpperCase()
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium th-text-primary truncate">@{c.name}</p>
-                              <p className="text-[11px] th-text-muted">{c.poses.length} biểu cảm</p>
-                            </div>
-                            <span
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                appendMentionToIdea(c.name);
-                              }}
-                              className="ml-auto text-[10px] px-2 py-1 rounded-md th-bg-card th-text-secondary"
-                            >
-                              mention
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-xs th-text-muted">Chưa có nhân vật thư viện. Bạn vẫn có thể tạo meme ngay, hoặc tạo nhanh ở nút bên trên.</p>
-                  )}
-
-                  <div>
-                    <p className="text-xs th-text-tertiary mb-1.5">Nhân vật dùng 1 lần (không lưu thư viện):</p>
-                    <div className="flex gap-2">
-                      <Input
-                        id="one-off-character"
-                        placeholder="VD: Anh xe ôm công nghệ, chú mèo hàng xóm..."
-                        value={oneOffInput}
-                        onChange={(e) => setOneOffInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addOneOffCharacter();
-                          }
-                        }}
-                        className="text-sm"
-                      />
-                      <Button type="button" variant="outline" onClick={addOneOffCharacter}>
-                        <Plus size={14} /> Thêm
-                      </Button>
-                    </div>
-                    {oneOffCharacters.length > 0 && (
-                      <div className="flex gap-2 flex-wrap mt-2">
-                        {oneOffCharacters.map((name) => (
-                          <span key={name} className="px-2 py-1 rounded-lg text-xs th-bg-accent-light th-text-accent flex items-center gap-1">
-                            @{name}
-                            <button type="button" onClick={() => removeOneOffCharacter(name)} className="th-text-accent">
-                              <X size={12} />
-                            </button>
-                          </span>
-                        ))}
+                  {!noCharacters && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs th-text-tertiary">Nhân vật có sẵn (click để mention):</p>
+                        <Button size="sm" variant="outline" onClick={openQuickCharacterModal}>
+                          <Plus size={14} /> Tạo nhanh nhân vật
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                <p className="text-xs th-text-muted">Bạn không bắt buộc phải có nhân vật sẵn trong thư viện để tạo meme.</p>
+                      {characters.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {characters.map((c) => {
+                            const avatar = c.avatar_url || c.poses[0]?.image_url;
+                            const selected = selectedCharacterIds.has(c.id);
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => toggleSelectedCharacter(c.id)}
+                                className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all ${
+                                  selected
+                                    ? "th-border-accent th-bg-accent-light"
+                                    : "th-bg-tertiary th-bg-hover th-border"
+                                }`}
+                              >
+                                <div className="w-9 h-9 rounded-lg overflow-hidden th-bg-card flex items-center justify-center text-xs font-bold th-text-muted">
+                                  {avatar ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={avatar} alt={c.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    c.name[0]?.toUpperCase()
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium th-text-primary truncate">@{c.name}</p>
+                                  <p className="text-[11px] th-text-muted">{c.poses.length} biểu cảm</p>
+                                </div>
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    appendMentionToIdea(c.name);
+                                  }}
+                                  className="ml-auto text-[10px] px-2 py-1 rounded-md th-bg-card th-text-secondary"
+                                >
+                                  mention
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs th-text-muted">Chưa có nhân vật thư viện. Bạn vẫn có thể tạo meme ngay, hoặc tạo nhanh ở nút bên trên.</p>
+                      )}
+
+                      <div>
+                        <p className="text-xs th-text-tertiary mb-1.5">Nhân vật dùng 1 lần (không lưu thư viện):</p>
+                        <div className="flex gap-2">
+                          <Input
+                            id="one-off-character"
+                            placeholder="VD: Anh xe ôm công nghệ, chú mèo hàng xóm..."
+                            value={oneOffInput}
+                            onChange={(e) => setOneOffInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addOneOffCharacter();
+                              }
+                            }}
+                            className="text-sm"
+                          />
+                          <Button type="button" variant="outline" onClick={addOneOffCharacter}>
+                            <Plus size={14} /> Thêm
+                          </Button>
+                        </div>
+                        {oneOffCharacters.length > 0 && (
+                          <div className="flex gap-2 flex-wrap mt-2">
+                            {oneOffCharacters.map((name) => (
+                              <span key={name} className="px-2 py-1 rounded-lg text-xs th-bg-accent-light th-text-accent flex items-center gap-1">
+                                @{name}
+                                <button type="button" onClick={() => removeOneOffCharacter(name)} className="th-text-accent">
+                                  <X size={12} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div>
                   <p className="text-xs th-text-tertiary mb-2">Định dạng nhanh:</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
@@ -1283,6 +1316,7 @@ export default function GeneratePage() {
                       </div>
                     </div>
 
+                    {!noCharacters && (
                     <div>
                       <p className="text-xs font-medium th-text-secondary mb-2 flex items-center gap-1.5">
                         <Tags size={12} /> Tag nhân vật xuất hiện trong ảnh
@@ -1307,6 +1341,7 @@ export default function GeneratePage() {
                         })}
                       </div>
                     </div>
+                    )}
 
                     <div>
                       <p className="text-xs font-medium th-text-secondary mb-1.5">Prompt bổ sung</p>
