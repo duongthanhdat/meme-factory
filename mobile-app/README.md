@@ -35,3 +35,15 @@ Then open in Expo Go for iOS or Android.
 - Mobile calls AI and collaboration APIs with `Authorization: Bearer <token>`
 - Website and app share the same database and storage buckets
 - Admin stays on web only
+
+## App Store Metadata/Screenshots
+
+- Prepared metadata: `fastlane/metadata/en-US` and `fastlane/metadata/vi`
+- Prepared iPhone screenshots (6.5"): `fastlane/screenshots/en-US` and `fastlane/screenshots/vi`
+
+Upload commands:
+
+```bash
+FASTLANE_USER="your-apple-id@example.com" fastlane ios upload_metadata
+FASTLANE_USER="your-apple-id@example.com" fastlane ios upload_screenshots
+```

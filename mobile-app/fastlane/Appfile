@@ -1,0 +1,5 @@
+app_identifier("com.ungden.aidamobile")
+
+# You can override FASTLANE_USER at runtime:
+# FASTLANE_USER=you@apple.com fastlane ios upload_metadata
+apple_id(ENV["FASTLANE_USER"] || "")

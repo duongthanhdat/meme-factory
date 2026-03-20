@@ -1,0 +1,41 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload App Store metadata only"
+  lane :upload_metadata do
+    deliver(
+      app_identifier: "com.ungden.aidamobile",
+      metadata_path: "fastlane/metadata",
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      force: true,
+      automatic_release: false,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Upload App Store screenshots only"
+  lane :upload_screenshots do
+    deliver(
+      app_identifier: "com.ungden.aidamobile",
+      skip_binary_upload: true,
+      skip_metadata: true,
+      screenshots_path: "fastlane/screenshots",
+      force: true,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Upload metadata and screenshots"
+  lane :upload_store_assets do
+    deliver(
+      app_identifier: "com.ungden.aidamobile",
+      metadata_path: "fastlane/metadata",
+      screenshots_path: "fastlane/screenshots",
+      skip_binary_upload: true,
+      force: true,
+      automatic_release: false,
+      run_precheck_before_submit: false
+    )
+  end
+end
