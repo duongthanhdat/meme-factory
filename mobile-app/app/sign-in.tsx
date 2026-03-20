@@ -5,11 +5,12 @@ import { useAuth } from "@/providers/auth-provider";
 import { Button, Card, InputField, Screen, Subtle, Title } from "@/components/ui";
 
 export default function SignInPage() {
-  const { session, signIn, signUp } = useAuth();
+  const { session, signIn, signUp, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   if (session) {
     return <Redirect href="/(tabs)/projects" />;
@@ -31,6 +32,17 @@ export default function SignInPage() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setGoogleLoading(true);
+      await signInWithGoogle();
+    } catch (error) {
+      Alert.alert("Lỗi đăng nhập Google", error instanceof Error ? error.message : "Có lỗi xảy ra");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <Screen>
       <Card>
@@ -41,10 +53,16 @@ export default function SignInPage() {
       <Card>
         <InputField label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" />
         <InputField label="Mật khẩu" value={password} onChangeText={setPassword} placeholder="••••••••" secureTextEntry />
-        <Button onPress={handleSubmit} loading={loading}>{isSignUp ? "Tạo tài khoản" : "Đăng nhập"}</Button>
+        <Button onPress={handleSubmit} loading={loading} disabled={googleLoading}>{isSignUp ? "Tạo tài khoản" : "Đăng nhập"}</Button>
         <Text selectable onPress={() => setIsSignUp((value) => !value)} style={{ color: "#6d28d9", textAlign: "center", fontWeight: "600" }}>
           {isSignUp ? "Đã có tài khoản? Đăng nhập" : "Chưa có tài khoản? Đăng ký"}
         </Text>
+      </Card>
+
+      <Card>
+        <Button variant="secondary" onPress={handleGoogleSignIn} loading={googleLoading} disabled={loading}>
+          Đăng nhập bằng Google
+        </Button>
       </Card>
     </Screen>
   );

@@ -1,7 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { PropsWithChildren } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import { supabase } from "@/lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
 
 type AuthContextValue = {
   session: Session | null;
@@ -9,6 +13,7 @@ type AuthContextValue = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -46,6 +51,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
     async signUp(email, password) {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
+    },
+    async signInWithGoogle() {
+      const redirectUrl = Linking.createURL("/sign-in");
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) throw error;
+
+      if (data?.url) {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        if (result.type === "success" && result.url) {
+          const urlObj = new URL(result.url);
+          const params = new URLSearchParams(urlObj.hash.replace("#", "?") || urlObj.search);
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
+          if (access_token && refresh_token) {
+            const { error: sessionError } = await supabase.auth.setSession({ access_token, refresh_token });
+            if (sessionError) throw sessionError;
+          }
+        }
+      }
     },
     async signOut() {
       const { error } = await supabase.auth.signOut();
