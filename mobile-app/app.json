@@ -10,7 +10,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-image-picker"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ứng dụng cần quyền truy cập thư viện ảnh để tải lên ảnh nhân vật (pose/mascot) và logo cho meme.",
+          "cameraPermission": "Ứng dụng cần quyền truy cập camera để chụp ảnh nhân vật làm meme."
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -19,10 +25,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ungden.aidamobile"
+      "bundleIdentifier": "com.ungden.aidamobile",
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.ungden.aidamobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
