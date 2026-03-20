@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
+import { getRequestUser } from "@/lib/supabase/request-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,11 +11,8 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-async function resolveProject(projectRef: string) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+async function resolveProject(request: NextRequest, projectRef: string) {
+  const { supabase, user } = await getRequestUser(request);
 
   if (!user) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
@@ -30,16 +27,15 @@ async function resolveProject(projectRef: string) {
     return { error: NextResponse.json({ error: "Project not found" }, { status: 404 }) };
   }
 
-  return { user, project };
+  return { user, project, supabase };
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const resolved = await resolveProject(id);
+  const resolved = await resolveProject(_req, id);
   if ("error" in resolved) return resolved.error;
 
-  const { project } = resolved;
-  const supabase = await createServerSupabase();
+  const { project, supabase } = resolved;
 
   const { data: wallet } = await supabase
     .from("project_wallets")
@@ -63,7 +59,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const resolved = await resolveProject(id);
+  const resolved = await resolveProject(req, id);
   if ("error" in resolved) return resolved.error;
 
   const { user, project } = resolved;

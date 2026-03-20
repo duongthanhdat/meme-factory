@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/request-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,11 +11,8 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-async function resolveProjectAndUser(projectRef: string) {
-  const supabase = await createServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+async function resolveProjectAndUser(request: NextRequest, projectRef: string) {
+  const { supabase, user } = await getRequestUser(request);
 
   if (!user) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
@@ -35,7 +32,7 @@ async function resolveProjectAndUser(projectRef: string) {
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const resolved = await resolveProjectAndUser(id);
+  const resolved = await resolveProjectAndUser(_req, id);
   if ("error" in resolved) return resolved.error;
 
   const { user, project } = resolved;
@@ -120,7 +117,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const resolved = await resolveProjectAndUser(id);
+  const resolved = await resolveProjectAndUser(req, id);
   if ("error" in resolved) return resolved.error;
 
   const { user, project } = resolved;
@@ -184,7 +181,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const resolved = await resolveProjectAndUser(id);
+  const resolved = await resolveProjectAndUser(req, id);
   if ("error" in resolved) return resolved.error;
 
   const { user, project } = resolved;

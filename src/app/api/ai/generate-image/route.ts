@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
+import { getRequestUser } from "@/lib/supabase/request-auth";
 import {
   generateMemeImage,
   generateCharacterPose,
@@ -32,8 +32,7 @@ export async function POST(request: NextRequest) {
   let deductedAction: PointAction | null = null;
 
   try {
-    const supabase = await createServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await getRequestUser(request);
     if (!user) {
       return NextResponse.json(
         { error: "Vui lòng đăng nhập để sử dụng tính năng này" },

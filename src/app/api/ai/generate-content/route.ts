@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateMemeContent } from "@/lib/gemini";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/request-auth";
 import type { GenerateContentRequest } from "@/types/database";
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await getRequestUser(request);
     
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
