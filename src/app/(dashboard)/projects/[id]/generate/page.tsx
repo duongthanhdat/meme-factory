@@ -455,7 +455,7 @@ export default function GeneratePage() {
     const selectedChars = noCharacters ? [] : characters.filter((c) => selectedCharacterIds.has(c.id));
     const directVariation: ContentVariation = {
       content: {
-        headline: "",
+        headline: promptWithoutMentions,
         subtext: undefined,
         caption: undefined,
         tone: "theo ý tưởng người dùng",
@@ -476,7 +476,7 @@ export default function GeneratePage() {
           reasoning: "Người dùng chọn thủ công",
         };
       }),
-      headline: "",
+      headline: promptWithoutMentions,
       subtext: undefined,
       caption: undefined,
       tone: "theo ý tưởng người dùng",
@@ -487,7 +487,9 @@ export default function GeneratePage() {
     setSelectedVariation(0);
     setHasPickedVariation(true);
     setTaggedCharacterIds(new Set(selectedChars.map((c) => c.id)));
-    setAiCustomPrompt((prev) => (prev.trim() ? prev : promptWithoutMentions));
+    // Clear aiCustomPrompt if it was just copying the idea before, 
+    // to avoid duplicating the text in the prompt and confusing the AI.
+    setAiCustomPrompt((prev) => (prev.trim() === promptWithoutMentions ? "" : prev));
     setStep(3);
   };
 
