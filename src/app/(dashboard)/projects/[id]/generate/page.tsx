@@ -452,10 +452,30 @@ export default function GeneratePage() {
 
     const promptWithoutMentions = normalizedIdea.replace(/@([\p{L}\p{N}_\-\s]+)/gu, "$1").trim();
 
+    let parsedHeadline = "";
+    let parsedAiCustomPrompt = "";
+    let parsedTextRenderingNotes = "";
+
+    const scriptRegex = /(khung hình|panel|thoại|\bnói:|\btrả lời:|\bđáp:|\bhỏi:|\bbảo:)/i;
+    if (scriptRegex.test(promptWithoutMentions) || promptWithoutMentions.split('\n').length > 1) {
+      parsedHeadline = "";
+      parsedTextRenderingNotes = "YÊU CẦU BẮT BUỘC TỪ USER: Hãy render đoạn text sau lên ảnh (nếu có thoại thì đặt trong speech bubble, nếu có ngoặc kép/dấu hai chấm thì ưu tiên lấy chữ bên trong). TUYỆT ĐỐI KHÔNG viết các từ chỉ dẫn kịch bản (VD: 'Khung hình', 'gọi điện') lên ảnh. GIỮ NGUYÊN VĂN, không tóm tắt.\n\nText/Kịch bản:\n" + promptWithoutMentions;
+      parsedAiCustomPrompt = promptWithoutMentions;
+    } else {
+      const quoteMatch = promptWithoutMentions.match(/(?:["“])([\s\S]*?)(?:["”])/);
+      if (quoteMatch && quoteMatch[1].trim().length > 10) {
+        parsedHeadline = quoteMatch[1].trim();
+        parsedAiCustomPrompt = promptWithoutMentions.replace(quoteMatch[0], "").trim();
+      } else {
+        parsedHeadline = promptWithoutMentions;
+        parsedAiCustomPrompt = "";
+      }
+    }
+
     const selectedChars = noCharacters ? [] : characters.filter((c) => selectedCharacterIds.has(c.id));
     const directVariation: ContentVariation = {
       content: {
-        headline: promptWithoutMentions,
+        headline: parsedHeadline,
         subtext: undefined,
         caption: undefined,
         tone: "theo ý tưởng người dùng",
@@ -476,7 +496,8 @@ export default function GeneratePage() {
           reasoning: "Người dùng chọn thủ công",
         };
       }),
-      headline: promptWithoutMentions,
+      headline: parsedHeadline,
+      text_rendering_notes: parsedTextRenderingNotes || undefined,
       subtext: undefined,
       caption: undefined,
       tone: "theo ý tưởng người dùng",
@@ -487,9 +508,7 @@ export default function GeneratePage() {
     setSelectedVariation(0);
     setHasPickedVariation(true);
     setTaggedCharacterIds(new Set(selectedChars.map((c) => c.id)));
-    // Clear aiCustomPrompt if it was just copying the idea before, 
-    // to avoid duplicating the text in the prompt and confusing the AI.
-    setAiCustomPrompt((prev) => (prev.trim() === promptWithoutMentions ? "" : prev));
+    setAiCustomPrompt(parsedAiCustomPrompt);
     setStep(3);
   };
 
