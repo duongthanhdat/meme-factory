@@ -35,6 +35,8 @@ import { PROMPT_TEMPLATES, type PromptTemplate } from "@/lib/prompt-templates";
 import { useWallet } from "@/contexts/WalletContext";
 import { trackEvent } from "@/lib/analytics";
 
+import { compressImageToFile } from "@/lib/image-utils";
+
 export default function CharactersPage() {
   const params = useParams();
   const projectId = params.id as string;
@@ -149,7 +151,8 @@ export default function CharactersPage() {
     if (!poseFile || !poseCharId) return;
     setPoseSaving(true);
     try {
-      await addPose(poseCharId, { ...poseForm, emotion: "neutral", file: poseFile });
+      const compressedFile = await compressImageToFile(poseFile, 1024, poseFile.name);
+      await addPose(poseCharId, { ...poseForm, emotion: "neutral", file: compressedFile });
       setShowPoseModal(false);
       toast.success("Đã tải lên tư thế thành công");
     } catch (err) {
@@ -166,12 +169,13 @@ export default function CharactersPage() {
   const handleBulkUploadFile = async (file: File) => {
     if (!bulkUploadCharId) return;
     const nameWithoutExt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+    const compressedFile = await compressImageToFile(file, 1024, file.name);
     await addPose(bulkUploadCharId, {
       name: nameWithoutExt || "Pose",
       emotion: "neutral",
       description: "",
       is_transparent: false,
-      file,
+      file: compressedFile,
     });
   };
 
@@ -394,13 +398,14 @@ export default function CharactersPage() {
       // Convert base64 to File for addPose
       const response = await fetch(`data:image/png;base64,${aiPoseImage}`);
       const blob = await response.blob();
-      const file = new File([blob], `ai-character-base-${Date.now()}.png`, { type: "image/png" });
+      const compressedFile = await compressImageToFile(blob, 1024, `ai-character-base-${Date.now()}.jpg`);
+      
       const newPose = await addPose(aiPoseCharId, {
         name: "Base (AI)",
         emotion: "neutral",
         description: "AI generated base character image",
         is_transparent: false,
-        file,
+        file: compressedFile,
       });
 
       if (aiPoseRequestId && newPose?.id) {

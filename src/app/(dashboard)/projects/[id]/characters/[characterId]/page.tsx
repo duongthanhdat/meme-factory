@@ -31,6 +31,8 @@ import { PROMPT_TEMPLATES, type PromptTemplate } from "@/lib/prompt-templates";
 import { useWallet } from "@/contexts/WalletContext";
 import { trackEvent } from "@/lib/analytics";
 
+import { compressImageToFile } from "@/lib/image-utils";
+
 export default function CharacterDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -130,7 +132,8 @@ export default function CharacterDetailPage() {
     if (!poseFile) return;
     setPoseSaving(true);
     try {
-      await addPose(characterId, { ...poseForm, emotion: "neutral", file: poseFile });
+      const compressedFile = await compressImageToFile(poseFile, 1024, poseFile.name);
+      await addPose(characterId, { ...poseForm, emotion: "neutral", file: compressedFile });
       setShowPoseModal(false);
       toast.success("Đã tải lên tư thế thành công");
     } catch (err) {
@@ -141,12 +144,13 @@ export default function CharacterDetailPage() {
 
   const handleBulkUploadFile = async (file: File) => {
     const nameWithoutExt = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+    const compressedFile = await compressImageToFile(file, 1024, file.name);
     await addPose(characterId, {
       name: nameWithoutExt || "Pose",
       emotion: "neutral",
       description: "",
       is_transparent: false,
-      file,
+      file: compressedFile,
     });
   };
 
@@ -228,13 +232,13 @@ export default function CharacterDetailPage() {
     try {
       const response = await fetch(`data:image/png;base64,${aiPoseImage}`);
       const blob = await response.blob();
-      const file = new File([blob], `ai-character-base-${Date.now()}.png`, { type: "image/png" });
+      const compressedFile = await compressImageToFile(blob, 1024, `ai-character-base-${Date.now()}.jpg`);
       const newPose = await addPose(characterId, {
         name: "Base (AI)",
         emotion: "neutral",
         description: "AI generated base character image",
         is_transparent: false,
-        file,
+        file: compressedFile,
       });
 
       if (aiPoseRequestId && newPose?.id) {
