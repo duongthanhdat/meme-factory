@@ -82,7 +82,7 @@ export async function generateMemeImage(params: {
 
   const prompt = `Bạn là designer chuyên tạo meme cho fanpage comic Việt Nam. Hãy tạo một meme image hoàn chỉnh, chất lượng cao, sẵn sàng đăng social media.
 
-${hasHeadline ? `HEADLINE TEXT (viết lên ảnh, font đậm nổi bật): "${headline}"` : hasDialogueHint ? "TEXT MODE: Không có headline cố định. Hãy render text hội thoại/tường thuật nếu user mô tả trong prompt (speech bubble/caption trong khung hình)." : "TEXT MODE: Không có headline cố định. Chỉ thêm text nếu prompt yêu cầu rõ ràng; nếu không thì ưu tiên ảnh sạch, ít chữ."}
+${hasHeadline ? `HEADLINE TEXT (viết lên ảnh, font đậm nổi bật): "${headline}"` : hasDialogueHint ? "TEXT MODE: Không có headline cố định. Hãy đọc BRIEF BỔ SUNG để xem nhân vật nào nói câu gì, sau đó đặt câu thoại đó vào speech bubble (bóng thoại). LƯU Ý TỐI QUAN TRỌNG: TUYỆT ĐỐI KHÔNG viết các từ chỉ dẫn kịch bản (như 'Khung hình 1', 'panel', 'nói:', 'gọi điện', 'trả lời:') lên ảnh! CHỈ viết nội dung câu thoại/câu trích dẫn." : "TEXT MODE: Không có headline cố định. Chỉ thêm text nếu prompt yêu cầu rõ ràng; nếu không thì ưu tiên ảnh sạch, ít chữ."}
 ${hasHeadline && subtext ? `SUBTEXT (nhỏ hơn, bên dưới headline): "${subtext}"` : ""}
 Tone/Mood: ${tone}
 ${hasHeadline ? `Bố cục text: ${textPosition === "top" ? "Text ở phía trên ảnh" : textPosition === "bottom" ? "Text ở phía dưới ảnh" : textPosition === "center" ? "Text ở chính giữa" : "Text phía trên"}` : "Bố cục: tập trung vào hình minh hoạ, không dành vùng cho text."}

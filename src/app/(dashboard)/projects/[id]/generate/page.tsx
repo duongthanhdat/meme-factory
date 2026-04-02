@@ -467,8 +467,14 @@ export default function GeneratePage() {
         parsedHeadline = quoteMatch[1].trim();
         parsedAiCustomPrompt = promptWithoutMentions.replace(quoteMatch[0], "").trim();
       } else {
-        parsedHeadline = promptWithoutMentions;
-        parsedAiCustomPrompt = "";
+        const isImageDescription = /^(vẽ|tạo|hình|ảnh|cảnh|scene|mascot|nhân vật|meme về|một)/i.test(promptWithoutMentions);
+        if (isImageDescription || promptWithoutMentions.length > 80) {
+          parsedHeadline = "";
+          parsedAiCustomPrompt = promptWithoutMentions;
+        } else {
+          parsedHeadline = promptWithoutMentions;
+          parsedAiCustomPrompt = "";
+        }
       }
     }
 
