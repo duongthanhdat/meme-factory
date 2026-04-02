@@ -80,41 +80,37 @@ export async function generateMemeImage(params: {
 
   const defaultMemeStyle = `Phong cách: Cartoon meme fanpage Việt Nam. Bold outlines, shading rõ ràng, dynamic composition. Màu sắc tươi sáng bão hoà, bắt mắt trên news feed. Đây là ảnh minh hoạ (illustration), KHÔNG phải ảnh chụp thật.`;
 
-  const prompt = `Bạn là designer chuyên tạo meme cho fanpage comic Việt Nam. Hãy tạo một meme image hoàn chỉnh, chất lượng cao, sẵn sàng đăng social media.
+  const prompt = `Bạn là một họa sĩ minh họa (Illustrator) chuyên nghiệp tạo meme cho mạng xã hội Việt Nam.
+Nhiệm vụ của bạn là tạo một bức tranh (Illustration) chất lượng cao theo đúng các yêu cầu bên dưới.
 
-${hasHeadline ? `HEADLINE TEXT (viết lên ảnh, font đậm nổi bật): "${headline}"` : hasDialogueHint ? "TEXT MODE: Không có headline cố định. Hãy đọc BRIEF BỔ SUNG để xem nhân vật nào nói câu gì, sau đó đặt câu thoại đó vào speech bubble (bóng thoại). LƯU Ý TỐI QUAN TRỌNG: TUYỆT ĐỐI KHÔNG viết các từ chỉ dẫn kịch bản (như 'Khung hình 1', 'panel', 'nói:', 'gọi điện', 'trả lời:') lên ảnh! CHỈ viết nội dung câu thoại/câu trích dẫn." : "TEXT MODE: Không có headline cố định. Chỉ thêm text nếu prompt yêu cầu rõ ràng; nếu không thì ưu tiên ảnh sạch, ít chữ."}
-${hasHeadline && subtext ? `SUBTEXT (nhỏ hơn, bên dưới headline): "${subtext}"` : ""}
+=== 1. CHỈ DẪN VẼ HÌNH ẢNH (VISUAL BRIEF) ===
+${customPrompt ? customPrompt : "Sáng tạo hình ảnh phù hợp với văn bản."}
+${backgroundDescription ? `\nChi tiết background: ${backgroundDescription}` : ""}
+
+=== 2. NHÂN VẬT (CHARACTERS) ===
+${charDescriptions || "Sáng tạo nhân vật phù hợp với ngữ cảnh."}
+${requiredCharacters.length ? `\nBắt buộc xuất hiện: ${requiredCharacters.join(", ")}` : ""}
+
+=== 3. CHỈ DẪN VĂN BẢN (TYPOGRAPHY) ===
+${hasHeadline ? `BẮT BUỘC VẼ CHÍNH XÁC dòng chữ sau lên ảnh (font đậm, to, dễ đọc):
+"${headline}"
+${subtext ? `Dòng chữ nhỏ hơn bên dưới: "${subtext}"` : ""}
+Vị trí văn bản: ${textPosition === "top" ? "Phía trên cùng" : textPosition === "bottom" ? "Phía dưới cùng" : textPosition === "center" ? "Chính giữa" : "Bất kỳ"}` 
+: `LƯU Ý QUAN TRỌNG VỀ VĂN BẢN:
+- Đọc kỹ phần VISUAL BRIEF ở trên. 
+- Nếu có các câu thoại nằm trong ngoặc kép ("..."), hãy cho vào bong bóng thoại (speech bubbles) chỉ về phía người nói.
+- TUYỆT ĐỐI KHÔNG BÊ NGUYÊN kịch bản lên ảnh. KHÔNG VIẾT các từ khóa chỉ đạo kịch bản (ví dụ: "Khung hình 1", "Khung dưới", "nói:", "gọi điện:"). CHỈ VẼ CÂU THOẠI.`}
+- Bắt buộc đúng chính tả tiếng Việt có dấu.
+
+=== 4. PHONG CÁCH & MOOD (STYLE) ===
+${style ? style : defaultMemeStyle}
 Tone/Mood: ${tone}
-${hasHeadline ? `Bố cục text: ${textPosition === "top" ? "Text ở phía trên ảnh" : textPosition === "bottom" ? "Text ở phía dưới ảnh" : textPosition === "center" ? "Text ở chính giữa" : "Text phía trên"}` : "Bố cục: tập trung vào hình minh hoạ, không dành vùng cho text."}
+${watermark?.enabled ? `\nWatermark: Góc dưới cùng bên phải. ${watermark.text ? `Chữ: "${watermark.text}"` : ""}` : ""}
 
-NHÂN VẬT trong ảnh:
-${charDescriptions || "(Không có nhân vật cụ thể — tạo illustration/scene phù hợp với nội dung meme)"}
-
-${backgroundDescription ? `BACKGROUND: ${backgroundDescription}` : "Background: Màu gradient hoặc scene đơn giản phù hợp nội dung, không quá phức tạp để text vẫn dễ đọc."}
-
-${style ? `PHONG CÁCH: ${style}` : defaultMemeStyle}
-${customPrompt ? `\nBRIEF BỔ SUNG: ${customPrompt}` : ""}
-${requiredCharacters.length ? `\nNHÂN VẬT BẮT BUỘC PHẢI XUẤT HIỆN: ${requiredCharacters.join(", ")}. Không được thay thế bằng nhân vật generic.` : ""}
-${watermark?.enabled ? `\nWATERMARK: Bắt buộc đặt watermark ở góc dưới bên phải (bottom-right), nhỏ gọn, không che nội dung chính.${watermark.text ? ` Nội dung watermark text: "${watermark.text}".` : ""}${watermark.logoBase64 ? " Dùng logo tham chiếu được đính kèm." : ""}` : "\nWATERMARK: Không thêm watermark."}
-
-YÊU CẦU BẮT BUỘC:
-1. ${hasHeadline ? "TEXT HEADLINE phải: font đậm (bold), kích thước LỚN, có viền đen/shadow để nổi bật trên mọi background, DỄ ĐỌC ngay từ thumbnail" : hasDialogueHint ? "Nếu prompt có thoại/câu nói thì render đúng chính tả tiếng Việt trong speech bubble/caption tương ứng từng nhân vật." : "Không bắt buộc text. Chỉ thêm text khi prompt yêu cầu rõ ràng."}
-2. ${hasHeadline || hasDialogueHint ? "Text tiếng Việt PHẢI CÓ DẤU đầy đủ và chính xác (ă, â, ê, ô, ơ, ư, đ, dấu thanh...)" : "Nếu không cần text thì ưu tiên ảnh sạch."}
-3. Nhân vật phải biểu cảm RÕ RÀNG, phù hợp phong cách đã chọn
-4. Bố cục cân đối, bắt mắt, phù hợp tỉ lệ ${format}, có đủ breathing room giữa text và nhân vật
-5. Màu sắc tươi sáng, bão hoà, nhìn nổi bật trên news feed
-6. Phù hợp đăng lên Facebook, Instagram — thu hút engagement
-6.4. OUTPUT PHẢI LÀ ILLUSTRATION/COMIC ART. Tuyệt đối KHÔNG photorealistic, KHÔNG ảnh chụp thật, KHÔNG live-action/cinematic photo.
-6.5. Nếu brief có người nổi tiếng (VD: Donald Trump), hãy vẽ theo phong cách minh hoạ/caricature nhất quán với comic style, không tạo ảnh chân dung thật.
-6.1. TEXT render trên ảnh CHỈ lấy từ HEADLINE TEXT và SUBTEXT ở trên, hoặc từ phần hướng dẫn text chuyên biệt trong BRIEF BỔ SUNG. Không được biến mô tả scene trong BRIEF BỔ SUNG thành chữ mới trên ảnh.
-6.2. Nếu BRIEF BỔ SUNG có nhãn [IMAGE BRIEF] thì đó là mô tả hình ảnh, KHÔNG phải text để viết lên ảnh.
-6.3. Nếu BRIEF BỔ SUNG có nhãn [TEXT RENDERING NOTES] thì đó là hướng dẫn dàn trang/chèn text, không phải mô tả bối cảnh.
-${characters.some((c) => c.poseImageBase64)
-  ? "7. QUAN TRỌNG NHẤT — CHARACTER CONSISTENCY: Mỗi nhân vật có ảnh reference đính kèm bên dưới. Bạn PHẢI vẽ nhân vật GIỐNG CHÍNH XÁC ảnh reference: cùng loài (species), cùng khuôn mặt, cùng màu da/lông/tóc, cùng đặc điểm nhận dạng (sừng, đuôi, tai, mắt...), cùng art style. CHỈ thay đổi biểu cảm, tư thế, bối cảnh. Nếu reference là con bò cartoon thì output PHẢI là con bò cartoon đó — KHÔNG được vẽ nhân vật khác."
-  : ""}
-${referenceImages?.length
-  ? `${characters.some((c) => c.poseImageBase64) ? "8" : "7"}. ẢNH THAM KHẢO NGỮ CẢNH: User đính kèm ${referenceImages.length} ảnh. Chỉ dùng để học bố cục/mood/context.`
-  : ""}`;
+=== 5. QUY TẮC CẤM (NEGATIVE PROMPT) ===
+- KHÔNG vẽ ảnh chụp thật (photorealistic), KHÔNG 3D render thực tế. CHỈ VẼ tranh minh họa (comic/illustration).
+- KHÔNG tạo nhân vật mới khác loài nếu đã có ảnh tham khảo (Reference). Bắt buộc vẽ giống hệt ảnh mẫu.
+`;
 
   // Build content parts: text prompt + reference images
   const contents: (

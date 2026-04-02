@@ -459,7 +459,7 @@ export default function GeneratePage() {
     const scriptRegex = /(khung hình|panel|thoại|\bnói:|\btrả lời:|\bđáp:|\bhỏi:|\bbảo:)/i;
     if (scriptRegex.test(promptWithoutMentions) || promptWithoutMentions.split('\n').length > 1) {
       parsedHeadline = "";
-      parsedTextRenderingNotes = "YÊU CẦU BẮT BUỘC TỪ USER: Hãy render đoạn text sau lên ảnh (nếu có thoại thì đặt trong speech bubble, nếu có ngoặc kép/dấu hai chấm thì ưu tiên lấy chữ bên trong). TUYỆT ĐỐI KHÔNG viết các từ chỉ dẫn kịch bản (VD: 'Khung hình', 'gọi điện') lên ảnh. GIỮ NGUYÊN VĂN, không tóm tắt.\n\nText/Kịch bản:\n" + promptWithoutMentions;
+      parsedTextRenderingNotes = ""; // gemini-image.ts prompt now handles script formats directly
       parsedAiCustomPrompt = promptWithoutMentions;
     } else {
       const quoteMatch = promptWithoutMentions.match(/(?:["“])([\s\S]*?)(?:["”])/);
