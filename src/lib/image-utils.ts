@@ -1,4 +1,22 @@
-export const compressImageToBase64 = (file: File | Blob, maxWidth = 1024): Promise<{ base64: string, mimeType: string }> => {
+export const compressImageToBase64 = async (file: File | Blob, maxWidth = 1024): Promise<{ base64: string, mimeType: string }> => {
+  // Fast path: If the file is already small (< 400KB), skip heavy canvas compression.
+  // This completely eliminates UI lag (main thread blocking) on mobile devices
+  // when generating memes using characters that are already optimized on Supabase.
+  if (file.size < 400 * 1024) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve({ 
+          base64: result.split(",")[1], 
+          mimeType: file.type || "image/jpeg" 
+        });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const url = URL.createObjectURL(file);
